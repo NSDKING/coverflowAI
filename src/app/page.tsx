@@ -1,12 +1,25 @@
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import GeneratorForm from "@/components/GenerateForm";
- 
+import dynamic from "next/dynamic";
+
+// On remplace l'import statique par un import dynamique 
+// pour désactiver le rendu serveur (SSR) sur ce composant spécifique.
+const GeneratorForm = dynamic(() => import("@/components/GenerateForm"), { 
+  ssr: false,
+  loading: () => (
+    <div className="h-[400px] w-full flex items-center justify-center bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+        <p className="text-slate-500 font-medium">Chargement du générateur sécurisé...</p>
+      </div>
+    </div>
+  )
+});
+
 export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
- 
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-50 via-white to-white">
@@ -49,6 +62,7 @@ export default async function Home() {
         {/* --- Le Formulaire de Génération --- */}
         <section id="generate" className="relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-[2rem] blur-2xl opacity-50 -z-10" />
+          {/* Ce composant sera maintenant rendu uniquement côté client */}
           <GeneratorForm />
         </section>
 
