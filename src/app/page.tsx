@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import ClientGenerator from "@/components/ClientGenerator"; // Ton wrapper créé précédemment
-
+ 
 export default async function Home() {
   // On récupère le client (qui peut être null maintenant)
   const supabase = await createClient();
@@ -11,7 +11,11 @@ export default async function Home() {
   if (supabase) {
     const { data } = await supabase.auth.getUser();
     user = data?.user;
+    console.log("Utilisateur connecté:", user?.email || "Aucun");
   }
+
+ 
+
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-50 via-white to-white">
