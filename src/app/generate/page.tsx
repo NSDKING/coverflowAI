@@ -13,7 +13,18 @@ export default function CVFactory() {
   const [step, setStep] = useState(1);
   const [cvData, setCvData] = useState<CVData | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const handleFinishUpload = (data: CVData) => {
     setCvData(data);
     setStep(2);
@@ -50,6 +61,33 @@ export default function CVFactory() {
 
         {step === 3 && cvData && (
           <div className="grid lg:grid-cols-2 gap-10 items-start animate-in fade-in slide-in-from-right-8 duration-500">
+            {/* Dans le panneau de gauche de l'étape 3 */}
+            <div className="mb-6 p-6 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-6">
+              <div className="relative group">
+                <div className="w-20 h-20 rounded-full bg-white border-2 border-blue-200 overflow-hidden flex items-center justify-center">
+                  {profileImage ? (
+                    <img src={profileImage} className="w-full h-full object-cover" />
+                  ) : (
+                    <Layout className="text-blue-300" />
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  id="photo-upload" 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handlePhotoUpload} 
+                />
+              </div>
+              
+              <div className="flex-1">
+                <h4 className="font-bold text-slate-800 text-sm">Ajouter une photo ?</h4>
+                <p className="text-xs text-slate-500 mb-3">Certains templates pro sont plus élégants avec une photo.</p>
+                <Button variant="outline" size="sm" asChild className="cursor-pointer bg-white">
+                  <label htmlFor="photo-upload">Choisir une image</label>
+                </Button>
+              </div>
+            </div>
             {/* PANNEAU GAUCHE : ÉDITION */}
             <div className="bg-white rounded-3xl shadow-xl border p-2 overflow-hidden">
               <CVEditor data={cvData} onChange={setCvData} />
