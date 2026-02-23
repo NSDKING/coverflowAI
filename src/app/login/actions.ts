@@ -7,6 +7,10 @@ import { createClient } from '@/utils/supabase/server'
 export async function login(formData: FormData) {
   const supabase = await createClient()
 
+  if (!supabase) {
+    redirect('/login?error=Erreur de connexion')
+  }
+
   const data = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
@@ -25,17 +29,27 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
   const supabase = await createClient()
 
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
+  if (!supabase) {
+    redirect('/login?error=Erreur de connexion')
   }
 
-  const { error } = await supabase.auth.signUp(data)
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+
+  const { error } = await supabase.auth.signUp({ email, password })
 
   if (error) {
-    redirect('/login?error=Erreur lors de la création du compte')
+    console.error("Signup Error Details:", error.message)
+
+    // 🔥 Detect if user already exists
+    if (error.message.toLowerCase().includes("already")) {
+      redirect('/login?error=Vous avez déjà un compte. Connectez-vous.')
+    }
+
+    // Default fallback error
+    redirect(`/login?error=${encodeURIComponent(error.message)}`)
   }
 
   revalidatePath('/', 'layout')
-  redirect('/login?message=Vérifiez vos e-mails pour confirmer l\'inscription')
+  redirect('/login?message=Vérifiez vos e-mails')
 }

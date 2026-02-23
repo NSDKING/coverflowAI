@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,20 +9,54 @@ import { Loader2, Sparkles, FileUp, FileText, X, Copy, Check, Download } from "l
 import mammoth from "mammoth";
 import jsPDF from "jspdf";
 
+interface SupabaseUser {
+  id: string;
+}
+
+interface UserCredits {
+  id: string;
+  credits: number;
+}
+
+interface GenerateLetterResponse {
+  content: string;
+}
+
+interface StripeSessionResponse {
+  url?: string;
+}
+
+interface InvokeOptions {
+  body: Record<string, unknown>;
+}
+
+interface SupabaseRpcResponse {
+  data: boolean | null;
+  error: Error | null;
+}
+
+interface SupabaseInvokeResponse<T> {
+  data: T | null;
+  error: Error | null;
+}
+
 export default function GeneratorForm() {
-  const [loading, setLoading] = useState(false);
-  const [parsing, setParsing] = useState(false);
-  const [resumeText, setResumeText] = useState("");
-  const [jobDescText, setJobDescText] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [parsing, setParsing] = useState<boolean>(false);
+  const [resumeText, setResumeText] = useState<string>("");
+  const [jobDescText, setJobDescText] = useState<string>("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
 
+  const COST_PER_GENERATION: number = 5;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
-
+  
   // --- Improved PDF ---
-  const downloadPDF = () => {
+  const downloadPDF = (): void => {
     if (!result) return;
     const doc = new jsPDF();
 
@@ -50,6 +84,7 @@ export default function GeneratorForm() {
   // --- PDF parsing functions (unchanged) ---
   const parsePdf = async (file: File): Promise<string> => {
     const pdfjsLib = await import("pdfjs-dist");
+    // @ts-ignore
     await import("pdfjs-dist/build/pdf.worker.mjs");
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
@@ -70,7 +105,7 @@ export default function GeneratorForm() {
     return result.value;
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
@@ -95,29 +130,93 @@ export default function GeneratorForm() {
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<void> => {
     if (!resumeText || !jobDescText) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // 1. Check & Deduct in one go via RPC
+    const { data: canAfford, error: rpcError } = await supabase.rpc(
+      "deduct_credits_if_available",
+      { user_id: user.id, cost: COST_PER_GENERATION }
+    );
+
+    // 2. If the RPC returns false (or null), show the modal
+    if (rpcError || !canAfford) {
+      setShowPaymentModal(true);
+      return;
+    }
+
+    // 3. If we are here, credits were deducted successfully. Start AI generation.
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-letter", {
+      const { data, error } = await supabase.functions.invoke<GenerateLetterResponse>("generate-letter", {
         body: { resume: resumeText, jobDescription: jobDescText },
       });
+
       if (error) throw error;
-      setResult(data.content);
+      setResult(data?.content ?? null);
+      
+      // Refresh local credits from DB to keep UI in sync
+      setCredits(prev => (prev !== null ? prev - COST_PER_GENERATION : null));
+
     } catch (err) {
       console.error(err);
-      alert("Erreur de génération.");
+      alert("Erreur de génération. Contactez le support pour un remboursement.");
     } finally {
       setLoading(false);
     }
   };
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = async (): Promise<void> => {
     if (!result) return;
     await navigator.clipboard.writeText(result);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+const handlePayment = async (bundleType: "starter" | "candidat" | "expert") => {
+  setLoading(true);
+  try {
+    // Opt  ionnel : vérifier si la session existe avant l'appel
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert("Tu dois être connecté pour acheter des crédits.");
+      return;
+    }
+
+    const { data, error } = await supabase.functions.invoke("create-stripe-session", {
+      body: { bundleType }
+    });
+
+    if (error) throw error;
+    if (data?.url) window.location.href = data.url;
+
+  } catch (err) {
+    console.error("Erreur complète:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+  useEffect(() => {
+    const fetchCredits = async (): Promise<void> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("credits")
+        .eq("id", user.id)
+        .single<UserCredits>();
+
+      if (!error && data) {
+        setCredits(data.credits);
+      }
+    };
+
+    fetchCredits();
+  }, []);
 
   return (
     <div className="max-w-5xl mx-auto space-y-12">
@@ -205,6 +304,34 @@ export default function GeneratorForm() {
           </div>
         </Card>
       )}
+
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl max-w-md w-full space-y-6">
+            <h2 className="text-xl font-bold text-center">Plus de crédits</h2>
+            <p className="text-center text-slate-600">
+              Tu n'as pas assez de crédits pour générer une lettre. Recharge maintenant !
+            </p>
+
+            <div className="flex justify-center space-x-4">
+              <Button
+                onClick={() => setShowPaymentModal(false)}
+                variant="outline"
+              >
+                Annuler
+              </Button>
+
+              <Button
+                onClick={() => handlePayment("starter")}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Recharger
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -5,7 +5,7 @@ export const createClient = async () => {
   const cookieStore = await cookies();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.NEXT_PUBLIC_PUBLISHABLE_KEY;
 
   // Si les clés manquent, on ne crash pas, on log un warning et on sort
   if (!supabaseUrl || !supabaseKey) {
