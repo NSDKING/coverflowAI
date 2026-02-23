@@ -1,5 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #resume-to-print, #resume-to-print * {
+    visibility: visible;
+  }
+  #resume-to-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
  
 @theme {
   --font-sans: var(--font-geist-sans);
