@@ -1,175 +1,184 @@
-import { Education, Experience, Skill } from '@/utils/types';
+'use client';
+
 import React from 'react';
+import { CVData } from '@/utils/types';
+import EditableText from '../EditableText';
 
-// --- Types ---
- 
-
-interface ResumeData {
-  name?: string;
-  title?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  profile?: string;
-  education?: Education[];
-  experience?: Experience[];
-  skills?: Skill[];
-  languages?: Skill[];
-  hobbies?: string;
-  birthDatePlace?: string;
-  maritalStatus?: string;
-  nationalityGender?: string;
+interface ClassicProps {
+  data: CVData;
 }
 
-// --- Default Data ---
-const DEFAULT_DATA: Required<ResumeData> = {
-  name: "Christopher Carter",
-  title: "Accountant",
-  address: "Budennovskij, 35, 344082, Rostov-on-Don – Rostov obl., Russia",
-  phone: "+8-928-912-70-24",
-  email: "shestakov@gmail.com",
-  profile: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed metus a orci elementum luctus. Ut sit amet quam id ligula dignissim vestibulum. Fusce lobortis sagittis orci in porttitor. Sed metus nulla, rhoncus eu condimentum et, fringilla vitae nisl.",
-  education: [
-    { date: "01/09/2015 – 01/10/2015", institution: "British Design High School", role: "UX/UI courses, Participant", location: "Moscow, Russia" },
-    { date: "01/09/2010 – 29/05/2014", institution: "Institute of Art & Design", role: "Master, Top level", location: "Rostov-on-Don, Russia", bullets: ["Lorem ipsum dolor sit amet, consectetur.", "Cras sed metus a orci elementum luctus."] }
-  ],
-  experience: [
-    { date: "May 2015 – Present time", title: "UX designer, Pentagram Group", location: "Moscow, Russia", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", bullets: ["Lorem ipsum dolor sit amet.", "Cras sed metus a orci elementum."] },
-    { date: "Oct. 2013 – Apr. 2015", title: "Graphic designer, Grizzly Agency", location: "Rostov-on-Don, Russia", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
-  ],
-  skills: [
-    { label: "UX/UI", value: "Perfectly" },
-    { label: "Front-end development", value: "Good" },
-    { label: "Branding & Identity", value: "Very good" },
-    { label: "Wayfinding systems", value: "Good" }
-  ],
-  languages: [
-    { label: "English", value: "Perfectly" },
-    { label: "Russian", value: "Good" }
-  ],
-  hobbies: "Swimming, Watching TV shows, 3D printing, Skateboarding",
-  birthDatePlace: "04/07/1969, Rostov-on-Don, Russia",
-  maritalStatus: "Married",
-  nationalityGender: "Russian / Male"
-};
+const Classic = ({ data }: ClassicProps) => {
+  const { personalInfo, summary, experiences, education, skills, additionalInfo } = data;
+  
+  const onSave = (path: string, val: any) => {
+    if (data && (data as any).handleUpdate) {
+      (data as any).handleUpdate(path, val);
+    }
+  };
 
-const Classic = ({ data = {} }: { data?: ResumeData }) => {
-  // Merge incoming data with defaults
-  const d = { ...DEFAULT_DATA, ...data };
+  const skillsArray = Array.isArray(skills) ? skills : [];
 
   return (
-    <div className="bg-gray-100 min-h-screen py-10 px-4 font-serif text-gray-800">
-      <div className="max-w-[850px] mx-auto bg-white p-12 shadow-lg min-h-[1100px]">
+    <div className="bg-white p-14 font-serif text-slate-900 shadow-sm min-h-[297mm] w-[210mm] mx-auto transition-all">
+      
+      {/* Header - Sobre et Institutionnel */}
+      <header className="text-center mb-10 border-b-2 border-slate-900 pb-8">
+        <h1 className="text-3xl font-bold tracking-tight uppercase mb-2 hover:bg-slate-50 rounded transition-colors cursor-pointer">
+          <EditableText 
+            value={personalInfo.fullName || "Votre Nom"} 
+            onSave={(v) => onSave('personalInfo.fullName', v)} 
+          />
+        </h1>
+        <h2 className="text-sm font-medium tracking-[0.3em] text-slate-500 uppercase mb-4">
+          <EditableText 
+            value={personalInfo.jobTitle || "Titre du Poste"} 
+            onSave={(v) => onSave('personalInfo.jobTitle', v)} 
+          />
+        </h2>
         
-        {/* Header */}
-        <header className="text-center mb-8 border-b border-gray-300 pb-6">
-          <h1 className="text-2xl font-semibold tracking-tight uppercase mb-2">
-            {d.name}, {d.title}
-          </h1>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>{d.address}</p>
-            <p>{d.phone} — <span className="underline">{d.email}</span></p>
-          </div>
-        </header>
-
-        <Section title="PROFILE">
-          <p className="text-sm leading-relaxed text-justify">{d.profile}</p>
-        </Section>
-
-        <Section title="EDUCATION">
-          <div className="space-y-6">
-            {(d.education ?? DEFAULT_DATA.education).map((edu, i) => (
-              <div key={i} className="flex justify-between items-start">
-                <div className="w-1/3 text-xs text-gray-500">{edu.date}</div>
-                <div className="w-2/3">
-                  <h3 className="font-bold text-sm">{edu.institution}</h3>
-                  <p className="text-xs italic text-gray-600">{edu.role}</p>
-                  <p className="text-xs mt-1 text-right text-gray-400">{edu.location}</p>
-                  {edu.bullets && (
-                    <ul className="list-disc list-inside text-xs mt-2 space-y-1">
-                      {edu.bullets.map((b, j) => <li key={j}>{b}</li>)}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="EXPERIENCE">
-          <div className="space-y-8">
-            {(d.experience ?? DEFAULT_DATA.experience).map((job, i) => (
-              <div key={i} className="flex justify-between items-start">
-                <div className="w-1/3 text-xs text-gray-500 italic">{job.date}</div>
-                <div className="w-2/3">
-                  <h3 className="font-bold text-sm">{job.title}</h3>
-                  <p className="text-xs mt-1 text-right text-gray-400">{job.location}</p>
-                  <p className="text-xs mt-2 leading-relaxed">{job.description}</p>
-                  {job.bullets && (
-                    <ul className="list-disc list-inside text-xs mt-2">
-                      {job.bullets.map((b, j) => <li key={j}>{b}</li>)}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="SKILLS" subtitle="In decreasing order">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-xs">
-            {(d.skills ?? DEFAULT_DATA.skills).map((s, i) => (
-              <SkillRow key={i} label={s.label} value={s.value} />
-            ))}
-          </div>
-        </Section>
-
-        <Section title="LANGUAGES" subtitle="In decreasing order">
-          <div className="grid grid-cols-2 gap-x-8 text-xs">
-             {(d.languages ?? DEFAULT_DATA.languages).map((l, i) => (
-              <SkillRow key={i} label={l.label} value={l.value} />
-            ))}
-          </div>
-        </Section>
-
-        <Section title="HOBBIES">
-          <p className="text-xs">{d.hobbies}</p>
-        </Section>
-
-        {/* Footer Meta */}
-        <div className="mt-8 pt-4 border-t border-gray-200 text-[10px] grid grid-cols-2 gap-y-2 uppercase tracking-wider text-gray-500">
-          <FooterItem label="Date / Place of birth" value={d.birthDatePlace} isRightBorder />
-          <FooterItem label="Marital status" value={d.maritalStatus} />
-          <FooterItem label="Nationality / Gender" value={d.nationalityGender} isRightBorder />
+        <div className="flex justify-center flex-wrap gap-x-4 gap-y-1 text-[11px] font-sans font-semibold text-slate-600 uppercase tracking-wider">
+          <span className="hover:text-black cursor-pointer"><EditableText value={personalInfo.location} onSave={(v) => onSave('personalInfo.location', v)} /></span>
+          <span className="text-slate-300">|</span>
+          <span className="hover:text-black cursor-pointer"><EditableText value={personalInfo.phone} onSave={(v) => onSave('personalInfo.phone', v)} /></span>
+          <span className="text-slate-300">|</span>
+          <span className="hover:text-black cursor-pointer underline underline-offset-2"><EditableText value={personalInfo.email} onSave={(v) => onSave('personalInfo.email', v)} /></span>
         </div>
-      </div>
+      </header>
+
+      {/* Profil */}
+      <Section title="Profil">
+        <div className="p-2 hover:bg-slate-50 rounded-lg transition-all">
+          <EditableText 
+            value={summary} 
+            onSave={(v) => onSave('summary', v)} 
+            multiline 
+            className="text-[13px] leading-relaxed text-justify italic font-sans text-slate-700"
+          />
+        </div>
+      </Section>
+
+      {/* Expérience - Le cœur du CV */}
+      <Section title="Expérience">
+        <div className="space-y-8">
+          {experiences.map((job, i) => (
+            <div key={i} className="group">
+              <div className="flex justify-between items-baseline mb-1">
+                <h3 className="font-bold text-sm uppercase tracking-tight">
+                  <EditableText value={job.role} onSave={(v) => onSave(`experiences.${i}.role`, v)} />
+                  <span className="mx-2 font-normal text-slate-400">@</span>
+                  <EditableText value={job.company} onSave={(v) => onSave(`experiences.${i}.company`, v)} />
+                </h3>
+                <span className="text-[10px] font-sans font-black text-slate-400 uppercase tracking-widest">
+                  <EditableText value={job.duration} onSave={(v) => onSave(`experiences.${i}.duration`, v)} />
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 uppercase font-bold mb-3">
+                <EditableText value={job.location} onSave={(v) => onSave(`experiences.${i}.location`, v)} />
+              </div>
+              <div className="space-y-1.5 border-l border-slate-100 ml-1 pl-4">
+                {job.description.map((desc, j) => (
+                  <div key={j} className="flex items-start gap-3">
+                    <span className="text-[8px] mt-1.5 text-slate-300">●</span>
+                    <EditableText 
+                      value={desc} 
+                      onSave={(v) => {  
+                        const newDesc = [...job.description];
+                        newDesc[j] = v;
+                        onSave(`experiences.${i}.description`, newDesc);
+                      }}
+                      multiline 
+                      className="text-[12px] leading-relaxed text-slate-600 hover:text-black transition-colors"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Formation */}
+      <Section title="Formation">
+        <div className="space-y-6">
+          {education.map((edu, i) => (
+            <div key={i} className="flex justify-between items-start hover:bg-slate-50 p-1 rounded">
+              <div className="flex-1">
+                <h3 className="font-bold text-[13px] uppercase">
+                  <EditableText value={edu.school} onSave={(v) => onSave(`education.${i}.school`, v)} />
+                </h3>
+                <p className="text-[12px] italic text-slate-500 mt-0.5">
+                  <EditableText value={edu.degree} onSave={(v) => onSave(`education.${i}.degree`, v)} />
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] font-sans font-bold text-slate-400">
+                  <EditableText value={edu.year} onSave={(v) => onSave(`education.${i}.year`, v)} />
+                </p>
+                <p className="text-[9px] uppercase tracking-tighter text-slate-300">
+                  <EditableText value={edu.location} onSave={(v) => onSave(`education.${i}.location`, v)} />
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Compétences & Langues - Grid plus compacte */}
+      <Section title="Expertise">
+        <div className="grid grid-cols-2 gap-8 text-[12px]">
+          <div className="space-y-2">
+            <h4 className="font-sans font-black text-[9px] uppercase tracking-widest text-slate-400">Compétences clés</h4>
+            <div className="p-2 bg-slate-50 rounded">
+              <EditableText 
+                value={skillsArray.join(', ')} 
+                onSave={(v) => onSave('skills', v.split(',').map((s: string) => s.trim()))} 
+                className="leading-relaxed"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-sans font-black text-[9px] uppercase tracking-widest text-slate-400">Langues & Loisirs</h4>
+            <div className="space-y-1">
+               <p className="flex gap-2">
+                 <span className="font-bold italic">Langues:</span>
+                 <EditableText value={additionalInfo.languages.join(', ')} onSave={(v) => onSave('additionalInfo.languages', v.split(',').map((s: string) => s.trim()))} />
+               </p>
+               <p className="flex gap-2">
+                 <span className="font-bold italic">Loisirs:</span>
+                 <EditableText value={additionalInfo.interests.join(', ')} onSave={(v) => onSave('additionalInfo.interests', v.split(',').map((s: string) => s.trim()))} />
+               </p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Footer Certifications */}
+      {additionalInfo.certifications.length > 0 && (
+        <div className="mt-12 pt-6 border-t border-slate-100 text-[10px] uppercase font-sans tracking-[0.2em] text-slate-400 text-center">
+          <span className="font-black text-slate-900 mr-3">Certifications:</span>
+          <EditableText 
+            value={additionalInfo.certifications.join(' — ')} 
+            onSave={(v) => onSave('additionalInfo.certifications', v.split('—').map((s: string) => s.trim()))} 
+          />
+        </div>
+      )}
     </div>
   );
 };
 
-// --- Helper Components ---
+// --- Helper Component ---
 
-const Section = ({ title, subtitle, children }: { title: string, subtitle?: string, children: React.ReactNode }) => (
-  <div className="flex mb-8 border-t border-gray-200 pt-4">
-    <div className="w-1/4 pr-4">
-      <h2 className="text-xs font-bold tracking-widest uppercase">{title}</h2>
-      {subtitle && <p className="text-[10px] text-gray-400 mt-1 italic">{subtitle}</p>}
+const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
+  <div className="flex mb-10 group/sec">
+    <div className="w-[100px] flex-shrink-0 pt-1">
+      <h2 className="text-[10px] font-sans font-black tracking-[0.25em] uppercase text-slate-300 group-hover/sec:text-slate-900 transition-colors">
+        {title}
+      </h2>
     </div>
-    <div className="w-3/4">{children}</div>
-  </div>
-);
-
-const SkillRow = ({ label, value }: { label: string, value: string }) => (
-  <div className="flex justify-between border-b border-gray-100 py-1">
-    <span>{label}</span>
-    <span className="text-gray-400 italic">{value}</span>
-  </div>
-);
-
-const FooterItem = ({ label, value, isRightBorder }: { label: string, value: string, isRightBorder?: boolean }) => (
-  <div className={`flex justify-between px-4 ${isRightBorder ? 'border-r border-gray-100 pr-8' : 'pl-8'}`}>
-    <span>{label}</span>
-    <span className="text-gray-800 text-right whitespace-pre-line">{value}</span>
+    <div className="flex-1 pl-8 border-l border-slate-50 group-hover/sec:border-slate-200 transition-colors">
+      {children}
+    </div>
   </div>
 );
 

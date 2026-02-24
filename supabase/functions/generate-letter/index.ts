@@ -1,66 +1,55 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { resume, jobDescription, tone = "professionnel" } = await req.json()
-    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    const { currentData, language = 'French' } = await req.json();
 
-    if (!apiKey) throw new Error("Clé API OpenAI manquante")
+    const PROMPT = `
+      Tu es un coach en carrière expert. Optimise ce CV JSON pour le rendre percutant.
+      
+      MISSIONS :
+      1. RÉDACTION : Utilise des verbes d'action (ex: "Piloté", "Optimisé" au lieu de "A fait").
+      2. SUMMARY : Écris un profil accrocheur de 3 lignes.
+      3. SKILLS : Regroupe les compétences de manière logique.
+      4. LANGUE : Tout doit être en ${language}.
+      
+      CONSIGNE STRICTE : Garde EXACTEMENT la même structure JSON que l'entrée.
+    `;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: "gpt-4o-mini",
         messages: [
-          { 
-            role: 'system', 
-            content: `Tu es un expert en recrutement. Ton but est de rédiger une lettre de motivation complète, prête à être envoyée.
-            
-            INSTRUCTIONS D'EXTRACTION :
-            - Analyse le CV pour trouver : Nom, Prénom, Adresse, Téléphone, Email.
-            - Analyse l'offre pour trouver : Nom de l'entreprise, ville.
-
-            STRUCTURE DE LA RÉPONSE :
-            1. BLOC COORDONNÉES : Affiche les infos du candidat en haut à gauche.
-            2. BLOC ENTREPRISE : Affiche les infos de l'entreprise juste en dessous à droite.
-            3. OBJET : "Candidature au poste de [Nom du Poste]"
-            4. CORPS : Utilise la méthode AIDA. Ton : ${tone}. Langue : Français.
-            5. SIGNATURE : Termine par le nom du candidat.
-
-            IMPORTANT : Remplace toutes les variables [Entre crochets] par les vraies infos du CV. Ne commence pas par "Voici votre lettre", commence directement par les coordonnées du candidat.` 
-          },
-          { 
-            role: 'user', 
-            content: `CV du candidat : ${resume}\n\nOffre d'emploi : ${jobDescription}` 
-          }
+          { role: "system", content: PROMPT },
+          { role: "user", content: "JSON À OPTIMISER : " + JSON.stringify(currentData) }
         ],
-        temperature: 0.7,
+        response_format: { type: "json_object" }
       }),
-    })
+    });
 
-    const data = await response.json()
-    return new Response(JSON.stringify({ content: data.choices[0].message.content }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const aiData = await response.json();
+    return new Response(aiData.choices[0].message.content, {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
-    })
+    });
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
-    })
+    });
   }
 })

@@ -2,132 +2,183 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileUp, Layout, Edit3, Download } from "lucide-react";
+import { FileUp, Layout, Edit3, Download, Sparkles, Loader2, Languages, Image as ImageIcon } from "lucide-react";
 import CVUploader from "@/components/CVUploader";
 import TemplateSelector from "@/components/TemplateSelector";
-import CVEditor from "@/components/CVEditor";
-import { CVData } from "@/utils/types";
 import CVRenderer from "@/components/CVRender";
- 
+import { CVData } from "@/utils/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 export default function CVFactory() {
   const [step, setStep] = useState(1);
   const [cvData, setCvData] = useState<CVData | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [language, setLanguage] = useState('French');
+  const [status, setStatus] = useState<'idle' | 'parsing' | 'optimizing'>('idle');
+
+  const handleInitialUpload = async (input: string) => {
+    setStatus('parsing');
+    try {
+      // 1. Try to see if the input is already JSON
+      const parsedData = JSON.parse(input);
+      
+      if (parsedData.personalInfo) {
+        console.log("Data already structured, skipping AI parsing.");
+        setCvData(parsedData);
+        setStep(2); // Jump straight to template selection
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setStatus('idle');
+    }
+  };
+
+  const handleAIOptimize = async () => {
+    if (!cvData) return;
+    setStatus('optimizing');
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-cv`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${ANON_KEY}`,
+          'apikey': ANON_KEY!
+        },
+        body: JSON.stringify({ currentData: cvData, language }),
+      });
+      const optimizedData = await response.json();
+      console.log("Données optimisées reçues de l'IA :", optimizedData);
+      setCvData(optimizedData);
+      setStep(3);
+    } catch (error) {
+      console.error(error);
+      setStep(3);
+    } finally {
+      setStatus('idle');
+    }
+  };
+
+  const updateCVData = (newData: CVData) => {
+    setCvData(newData);
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && cvData) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result as string);
+        updateCVData({
+          ...cvData,
+          personalInfo: { ...cvData.personalInfo, photo: reader.result as string }
+        });
       };
       reader.readAsDataURL(file);
     }
   };
-  const handleFinishUpload = (data: CVData) => {
-    setCvData(data);
-    setStep(2);
-  };
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 space-y-8">
-      {/* STEPPER */}
-      <div className="flex justify-center items-center gap-6 mb-12">
-        <StepIcon active={step >= 1} icon={<FileUp size={20}/>} label="Upload" />
-        <div className={`h-1 w-16 rounded ${step >= 2 ? 'bg-blue-600' : 'bg-slate-200'}`} />
-        <StepIcon active={step >= 2} icon={<Layout size={20}/>} label="Design" />
-        <div className={`h-1 w-16 rounded ${step >= 3 ? 'bg-blue-600' : 'bg-slate-200'}`} />
-        <StepIcon active={step >= 3} icon={<Edit3 size={20}/>} label="Édition" />
+    <div className="max-w-6xl mx-auto py-10 px-4 space-y-8">
+      {/* Stepper simplifié */}
+      <div className="flex justify-center items-center gap-4 mb-8">
+        {[1, 2, 3].map((s) => (
+          <div key={s} className={`h-2 w-12 rounded-full ${step >= s ? 'bg-blue-600' : 'bg-slate-200'}`} />
+        ))}
       </div>
 
       <div className="min-h-[60vh]">
         {step === 1 && (
-          <Card className="p-16 border-dashed border-4 rounded-[3rem] text-center bg-slate-50/50">
-            <CVUploader onComplete={handleFinishUpload} />
-          </Card>
+          <div className="max-w-xl mx-auto space-y-6">
+            <Card className="p-8 border-2 border-dashed rounded-[2.5rem] bg-white shadow-xl">
+               <div className="flex justify-center mb-6">
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="w-40 rounded-full border-slate-200 font-bold">
+                      <Languages size={16} className="mr-2"/> <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="French">Français</SelectItem>
+                      <SelectItem value="English">English</SelectItem>
+                    </SelectContent>
+                  </Select>
+               </div>
+               {status === 'parsing' ? (
+                 <div className="py-20 text-center space-y-4">
+                   <Loader2 className="h-12 w-12 text-blue-600 animate-spin mx-auto" />
+                   <p className="font-bold">Extraction des données...</p>
+                 </div>
+               ) : (
+                 <CVUploader onComplete={handleInitialUpload} />
+               )}
+            </Card>
+          </div>
         )}
 
         {step === 2 && (
-          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-            <h2 className="text-3xl font-black text-center text-slate-900">Choisissez votre style</h2>
-            <TemplateSelector 
-              selectedId={selectedTemplate} 
-              onSelect={(id) => { setSelectedTemplate(id); setStep(3); }}
-              cvData={cvData}
-            />
+          <div className="space-y-8 text-center animate-in fade-in zoom-in-95">
+            {status === 'optimizing' ? (
+              <div className="py-40 space-y-6">
+                <div className="relative inline-block">
+                   <Loader2 className="h-20 w-20 text-blue-600 animate-spin" />
+                   <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-500" />
+                </div>
+                <h2 className="text-2xl font-black">L'IA peaufine votre rédaction...</h2>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-black">Choisissez un template</h2>
+                <TemplateSelector 
+                  selectedId={selectedTemplate} 
+                  onSelect={(id) => { setSelectedTemplate(id); handleAIOptimize(); }}
+                  cvData={cvData}
+                />
+              </>
+            )}
           </div>
         )}
 
         {step === 3 && cvData && (
-          <div className="grid lg:grid-cols-2 gap-10 items-start animate-in fade-in slide-in-from-right-8 duration-500">
-            {/* Dans le panneau de gauche de l'étape 3 */}
-            <div className="mb-6 p-6 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-6">
-              <div className="relative group">
-                <div className="w-20 h-20 rounded-full bg-white border-2 border-blue-200 overflow-hidden flex items-center justify-center">
-                  {profileImage ? (
-                    <img src={profileImage} className="w-full h-full object-cover" />
-                  ) : (
-                    <Layout className="text-blue-300" />
-                  )}
-                </div>
-                <input 
-                  type="file" 
-                  id="photo-upload" 
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={handlePhotoUpload} 
+          <div className="flex flex-col items-center gap-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
+            
+            {/* BARRE D'OUTILS FLOTTANTE */}
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900/90 backdrop-blur-xl p-3 rounded-2xl shadow-2xl border border-white/10 text-white">
+              <div className="px-4 border-r border-white/10 hidden md:block">
+                 <p className="text-[10px] uppercase font-black text-blue-400">Édition directe</p>
+                 <p className="text-xs font-medium text-slate-300">Double-cliquez sur le texte</p>
+              </div>
+
+              <input type="file" id="photo-float" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+              <label htmlFor="photo-float" className="p-2 hover:bg-white/10 rounded-xl cursor-pointer transition-colors" title="Changer la photo">
+                <ImageIcon size={20} />
+              </label>
+
+              <Button onClick={() => handleAIOptimize()} variant="ghost" className="hover:bg-emerald-500/20 text-emerald-400 font-bold">
+                <Sparkles size={18} className="mr-2" /> Ré-optimiser
+              </Button>
+
+              <div className="h-6 w-[1px] bg-white/10 mx-2" />
+
+              <Button className="bg-blue-600 hover:bg-blue-500 rounded-xl px-6 font-bold shadow-lg shadow-blue-500/20">
+                <Download size={18} className="mr-2" /> Exporter PDF
+              </Button>
+            </div>
+
+            {/* LE CV EN PLEINE LARGEUR (Zone WYSIWYG) */}
+            <div className="w-full flex justify-center pb-32">
+              <div className="shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] rounded-lg overflow-hidden border border-slate-200 bg-white">
+                <CVRenderer 
+                  data={cvData} 
+                  templateId={selectedTemplate} 
+                  onChange={updateCVData} // On passe la fonction de mise à jour
                 />
-              </div>
-              
-              <div className="flex-1">
-                <h4 className="font-bold text-slate-800 text-sm">Ajouter une photo ?</h4>
-                <p className="text-xs text-slate-500 mb-3">Certains templates pro sont plus élégants avec une photo.</p>
-                <Button variant="outline" size="sm" asChild className="cursor-pointer bg-white">
-                  <label htmlFor="photo-upload">Choisir une image</label>
-                </Button>
-              </div>
-            </div>
-            {/* PANNEAU GAUCHE : ÉDITION */}
-            <div className="bg-white rounded-3xl shadow-xl border p-2 overflow-hidden">
-              <CVEditor data={cvData} onChange={setCvData} />
-            </div>
-
-            {/* PANNEAU DROITE : APERÇU FIXE */}
-            <div className="sticky top-10 space-y-4">
-              <div className="flex justify-between items-center bg-slate-900 p-4 rounded-2xl shadow-2xl text-white">
-                <span className="text-sm font-bold uppercase tracking-widest text-blue-400">Aperçu Réel</span>
-                <Button className="bg-blue-600 hover:bg-blue-500 rounded-full px-6">
-                  <Download size={18} className="mr-2" /> Exporter PDF
-                </Button>
-              </div>
-
-              {/* ZONE DE RENDU AVEC LE SCALE MAGIQUE */}
-              <div className="bg-slate-200 rounded-[2rem] border-4 border-white shadow-inner flex justify-center overflow-hidden h-[750px] relative">
-                <div className="absolute top-0 origin-top transform transition-all duration-500 ease-out py-10" 
-                     style={{ transform: 'scale(0.55)' }}>
-                  <CVRenderer 
-                    data={cvData} 
-                    templateId={selectedTemplate} 
-                    profileImage={cvData.personalInfo.photo} 
-                  />
-                </div>
               </div>
             </div>
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StepIcon({ active, icon, label }: { active: boolean, icon: any, label: string }) {
-  return (
-    <div className={`flex flex-col items-center gap-3 ${active ? 'text-blue-600' : 'text-slate-400'}`}>
-      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${active ? 'bg-blue-600 text-white shadow-xl rotate-0' : 'bg-slate-100 rotate-3'}`}>
-        {icon}
-      </div>
-      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </div>
   );
 }

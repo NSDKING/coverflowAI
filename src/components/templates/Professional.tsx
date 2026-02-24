@@ -1,189 +1,189 @@
+'use client';
+
 import React from 'react';
+import { CVData } from '@/utils/types';
+import EditableText from '../EditableText';
 
-/** * TYPES DEFINITION
- */
-export interface Reference {
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
+interface ProfessionalProps {
+  data: CVData;
 }
 
-export interface CVData {
-  personalInfo: {
-    fullName: string;
-    jobTitle: string;
-    email: string;
-    phone: string;
-    location: string;
-    photo?: string; 
+const Professional: React.FC<ProfessionalProps> = ({ data }) => {
+  const { personalInfo, summary, experiences, education, skills } = data;
+
+  // Injection sécurisée de la fonction de mise à jour du parent
+  const onSave = (path: string, val: any) => {
+    if (data && (data as any).handleUpdate) {
+      (data as any).handleUpdate(path, val);
+    }
   };
-  summary?: string;
-  experiences: Array<{
-    role: string;
-    company: string;
-    duration: string;
-    description: string[];
-  }>;
-  skills: string[];
-  education: Array<{
-    degree: string;
-    school: string;
-    year: string;
-  }>;
-  references?: Reference[];
-}
 
-/**
- * DEFAULT DATA (Sophie Walton Fallback)
- */
-const DEFAULT_DATA: CVData = {
-  personalInfo: {
-    fullName: "Sophie Walton",
-    jobTitle: "Customer Service Representative",
-    email: "hw12@yahoo.com",
-    phone: "(206) 742-5187",
-    location: "32600 42nd Ave SW, Seattle, WA 98116",
-    photo: "https://i.pravatar.cc/150?u=sophie" 
-  },
-  summary: "Dedicated Customer Service Representative dedicated to providing quality care for ultimate customer satisfaction. Proven ability to establish and maintain excellent communication and relationships with clients. Adept in general accounting and finance transactions.",
-  experiences: [
-    {
-      role: "Branch Customer Service Representative",
-      company: "AT&T Inc., Seattle",
-      duration: "AUGUST 2014 — SEPTEMBER 2019",
-      description: [
-        "Maintained up to date knowledge of products and services.",
-        "Handled customer calls and responded to queries about services, product malfunctions, promotions, and billing.",
-        "Worked to address all customer concerns in a timely and effective manner."
-      ]
-    }
-  ],
-  skills: ["Excellent Communication Skills", "Troubleshooting Skills", "Multitasking Skills", "Mediation and Negotiation Skills", "Marketing Strategies"],
-  education: [
-    {
-      degree: "Bachelor of Communications",
-      school: "University of Seattle, Seattle",
-      year: "AUGUST 2007 — MAY 2011"
-    }
-  ],
-  references: [
-    { name: "Marissa Leeds", company: "Gold Coast Hotel", email: "mleeds@goldcoast.com", phone: "732-189-0909" },
-    { name: "George Kenny", company: "AT&T", email: "gkenny@att.com", phone: "888-897-0221" }
-  ]
-};
-
-/**
- * COMPONENT
- */
-const Professional = ({ data }: { data?: CVData }) => {
-  const d = data ?? DEFAULT_DATA;
+  const skillsArray = Array.isArray(skills) 
+    ? skills 
+    : (typeof skills === 'string' ? (skills as string).split(',') : []);
 
   return (
-    <div className="bg-zinc-100 min-h-screen py-10 flex justify-center font-sans antialiased">
-      <div className="w-[850px] bg-white shadow-2xl flex min-h-[1100px]">
+    <div className="w-[210mm] min-h-[297mm] mx-auto bg-white flex shadow-2xl font-sans antialiased overflow-hidden">
+      
+      {/* SIDEBAR GAUCHE - EMERALD DARK */}
+      <aside className="w-[33%] bg-[#064e3b] text-white flex flex-col pt-12 pb-10">
         
-        {/* LEFT SIDEBAR - DARK GREEN */}
-        <aside className="w-[33%] bg-[#064e3b] text-white flex flex-col pt-12">
-          {/* Header/Photo Section */}
-          <div className="flex flex-col items-center px-8 mb-10">
-            {d.personalInfo.photo && (
-              <div className="w-28 h-28 rounded-full border-2 border-white/20 overflow-hidden mb-6">
-                <img src={d.personalInfo.photo} alt="Profile" className="w-full h-full object-cover" />
-              </div>
-            )}
-            <h1 className="text-2xl font-bold text-center tracking-tight mb-2">
-              {d.personalInfo.fullName}
-            </h1>
-            <div className="w-8 h-[1px] bg-white/40 mb-3" />
-            <p className="text-[10px] uppercase tracking-[0.25em] text-center text-emerald-100/80 leading-relaxed px-4">
-              {d.personalInfo.jobTitle}
-            </p>
-          </div>
+        {/* Photo & Nom */}
+        <div className="flex flex-col items-center px-8 mb-10 text-center">
+          {personalInfo.photo && (
+            <div className="w-32 h-32 rounded-full border-4 border-white/10 overflow-hidden mb-6 shadow-xl transition-transform hover:scale-105">
+              <img src={personalInfo.photo} alt="Profile" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <h1 className="text-2xl font-black tracking-tight mb-2 hover:bg-white/10 rounded px-2 transition-colors cursor-pointer">
+            <EditableText 
+              value={personalInfo.fullName || "Votre Nom"} 
+              onSave={(v) => onSave('personalInfo.fullName', v)} 
+            />
+          </h1>
+          <div className="w-10 h-[2px] bg-emerald-400 mb-4 rounded-full" />
+          <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/90 font-bold leading-relaxed px-4 hover:bg-white/10 rounded">
+            <EditableText 
+              value={personalInfo.jobTitle || "Titre du Poste"} 
+              onSave={(v) => onSave('personalInfo.jobTitle', v)} 
+            />
+          </p>
+        </div>
 
-          {/* Details & Skills */}
-          <div className="px-8 space-y-10">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-white/10 pb-1">Details</h3>
-              <div className="text-[11px] text-emerald-50 space-y-3 leading-relaxed">
-                <p className="whitespace-pre-line">{d.personalInfo.location}</p>
-                <p>{d.personalInfo.phone}</p>
-                <p className="underline truncate block">{d.personalInfo.email}</p>
+        {/* Contact & Skills */}
+        <div className="px-8 space-y-12">
+          <section>
+            <h3 className="text-[12px] font-black uppercase tracking-widest mb-5 text-emerald-300/80 border-b border-white/10 pb-2">Contact</h3>
+            <div className="text-[11px] text-emerald-50/90 space-y-4 leading-relaxed">
+              <div className="hover:bg-white/5 p-1 rounded cursor-pointer">
+                <p className="text-[9px] uppercase font-bold text-emerald-400 mb-0.5">Localisation</p>
+                <EditableText value={personalInfo.location} onSave={(v) => onSave('personalInfo.location', v)} />
+              </div>
+              <div className="hover:bg-white/5 p-1 rounded cursor-pointer">
+                <p className="text-[9px] uppercase font-bold text-emerald-400 mb-0.5">Téléphone</p>
+                <EditableText value={personalInfo.phone} onSave={(v) => onSave('personalInfo.phone', v)} />
+              </div>
+              <div className="hover:bg-white/5 p-1 rounded cursor-pointer">
+                <p className="text-[9px] uppercase font-bold text-emerald-400 mb-0.5">Email</p>
+                <EditableText value={personalInfo.email} onSave={(v) => onSave('personalInfo.email', v)} className="underline truncate block" />
               </div>
             </div>
+          </section>
 
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-white/10 pb-1">Skills</h3>
-              <div className="space-y-4">
-                {d.skills.map((skill, i) => (
-                  <div key={i}>
-                    <p className="text-[10px] mb-2">{skill}</p>
-                    <div className="h-[2px] bg-white/10 w-full relative">
-                      <div className="absolute left-0 top-0 h-full bg-white w-[85%]" />
+          <section>
+            <h3 className="text-[12px] font-black uppercase tracking-widest mb-5 text-emerald-300/80 border-b border-white/10 pb-2">Expertise</h3>
+            <div className="space-y-5">
+               <div className="p-2 bg-black/10 rounded-lg border border-white/5">
+                <EditableText 
+                  value={skillsArray.join(', ')} 
+                  onSave={(v) => onSave('skills', v.split(',').map((s: string) => s.trim()))} 
+                  className="text-[10px] leading-relaxed italic text-emerald-100/80"
+                />
+               </div>
+              
+              {/* Skill bars visual indicator */}
+              <div className="space-y-4 pt-2">
+                {skillsArray.slice(0, 4).map((skill, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex justify-between text-[9px] uppercase font-bold tracking-tighter">
+                      <span>{skill}</span>
+                      <span className="text-emerald-400">85%</span>
+                    </div>
+                    <div className="h-[3px] bg-white/10 w-full rounded-full overflow-hidden">
+                       <div className="h-full bg-emerald-400 w-[85%] rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+          </section>
+        </div>
+      </aside>
+
+      {/* CONTENU DROIT - MAIN CONTENT */}
+      <main className="w-[67%] p-14 text-slate-800 bg-slate-50/30">
+        
+        <Section title="Profil Personnel">
+          <div className="p-3 hover:bg-white hover:shadow-md transition-all rounded-xl border border-transparent hover:border-slate-100">
+            <EditableText 
+              value={summary || ""} 
+              onSave={(v) => onSave('summary', v)} 
+              multiline 
+              className="text-[13px] leading-7 text-slate-600 italic"
+            />
           </div>
-        </aside>
+        </Section>
 
-        {/* RIGHT CONTENT - MAIN */}
-        <main className="w-[67%] p-12 text-slate-800">
-          <Section title="Profile">
-            <p className="text-xs leading-6 text-slate-600 text-justify">{d.summary}</p>
-          </Section>
-
-          <Section title="Employment History">
-            <div className="space-y-8">
-              {d.experiences.map((exp, i) => (
-                <div key={i}>
-                  <h3 className="text-sm font-bold text-slate-900">{exp.role}, {exp.company}</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 mb-3">{exp.duration}</p>
-                  <ul className="list-disc ml-4 space-y-2">
-                    {exp.description.map((bullet, j) => (
-                      <li key={j} className="text-xs text-slate-600 pl-1 leading-relaxed">{bullet}</li>
-                    ))}
-                  </ul>
+        <Section title="Expériences">
+          <div className="space-y-10">
+            {experiences.map((exp, i) => (
+              <div key={i} className="group relative">
+                <div className="flex justify-between items-baseline mb-2">
+                  <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5 hover:text-emerald-700 transition-colors">
+                    <EditableText value={exp.role} onSave={(v) => onSave(`experiences.${i}.role`, v)} />
+                    <span className="text-slate-300 font-light">@</span>
+                    <EditableText value={exp.company} onSave={(v) => onSave(`experiences.${i}.company`, v)} />
+                  </h3>
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
+                    <EditableText value={exp.duration} onSave={(v) => onSave(`experiences.${i}.duration`, v)} />
+                  </span>
                 </div>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Education">
-            <div className="space-y-6">
-              {d.education.map((edu, i) => (
-                <div key={i}>
-                  <h3 className="text-sm font-bold text-slate-900">{edu.degree}, {edu.school}</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{edu.year}</p>
+                
+                <div className="ml-2 border-l-2 border-slate-100 pl-5 space-y-2 mt-3">
+                  {exp.description.map((desc, j) => (
+                    <div key={j} className="flex items-start gap-3 group/line">
+                      <span className="text-emerald-500 mt-2 text-[6px]">■</span>
+                      <EditableText 
+                        value={desc} 
+                        onSave={(v) => {  
+                          const newDesc = [...exp.description];
+                          newDesc[j] = v;
+                          onSave(`experiences.${i}.description`, newDesc);
+                        }}
+                        multiline 
+                        className="text-[12px] leading-relaxed text-slate-600 flex-1 hover:text-slate-900"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </Section>
-
-          {d.references && d.references.length > 0 && (
-            <Section title="References">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                {d.references.map((ref, i) => (
-                  <div key={i} className="text-xs">
-                    <p className="font-bold text-slate-900">{ref.name} from {ref.company}</p>
-                    <p className="text-slate-500 mt-1">{ref.email} | {ref.phone}</p>
-                  </div>
-                ))}
               </div>
-            </Section>
-          )}
-        </main>
+            ))}
+          </div>
+        </Section>
 
-      </div>
+        <Section title="Formation">
+          <div className="grid grid-cols-1 gap-6">
+            {education.map((edu, i) => (
+              <div key={i} className="p-3 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-[13px]">
+                      <EditableText value={edu.degree} onSave={(v) => onSave(`education.${i}.degree`, v)} />
+                    </h4>
+                    <p className="text-slate-500 text-xs mt-0.5">
+                      <EditableText value={edu.school} onSave={(v) => onSave(`education.${i}.school`, v)} />
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    <EditableText value={edu.year} onSave={(v) => onSave(`education.${i}.year`, v)} />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      </main>
     </div>
   );
 };
 
-// Helper Section component
+// Helper Section component pour la cohérence visuelle
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <section className="mb-10">
-    <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-1.5 mb-4">{title}</h2>
+  <section className="mb-12 last:mb-0">
+    <div className="flex items-center gap-4 mb-6">
+      <h2 className="text-[15px] font-black text-slate-900 uppercase tracking-[0.2em]">{title}</h2>
+      <div className="h-[1px] bg-slate-200 flex-1" />
+    </div>
     {children}
   </section>
 );

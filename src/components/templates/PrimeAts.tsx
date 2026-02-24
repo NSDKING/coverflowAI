@@ -1,162 +1,193 @@
-import React from 'react';
-import { Mail, Phone, MapPin } from 'lucide-react';
-import { ResumeData } from '@/utils/types';
+'use client';
 
-/** * Interfaces for Type Safety 
- */
+import React from 'react';
+import { Mail, Phone, MapPin, PlusCircle, Trash2 } from 'lucide-react';
+import { CVData } from '@/utils/types';
+import EditableText from '../EditableText';
 
 interface PrimeAtsProps {
-  data?: ResumeData;
+  data: CVData;
+  onChange?: (newData: CVData) => void; // On privilégie un onChange propre
 }
 
-const PrimeAts: React.FC<PrimeAtsProps> = ({ data = {} }) => {
-  // Destructuring with Herman Walton's data as the default fallback
-  const {
-    name = "Herman Walton",
-    title = "Financial Analyst",
-    contact = {
-      address: "Market Street 12, New York, 1021, USA",
-      phone: "(412) 479-6342",
-      email: "example@gmail.com",
-    },
-    profileImage = "/api/placeholder/128/128",
-    summary = "Experienced and driven Financial Analyst with an impressive background of managing multi-million dollar budgets while providing analysis and account support within product development departments. Worked to reduce business expenses and develop logical and advantageous operating plan budgets.",
-    experience = [
-      {
-        role: "Financial Analyst",
-        company: "GEO Corp.",
-        period: "Jan 2012 — Present",
-        bullets: [
-          "Created budgets and ensured that labor and material costs were decreased by 15 percent.",
-          "Created financial reports on completed projects, indicating advantageous results.",
-          "Generated financial statements including cash flow charts and balance sheets.",
-          "Introduced and implemented a different type of software to enhance communication."
-        ]
-      },
-      {
-        role: "Financial Analyst",
-        company: "Sisco Enterprises",
-        period: "Feb 2008 — Dec 2012",
-        bullets: [
-          "Provide reports, ad-hoc analysis, and annual operations plan budgets.",
-          "Analyzed supplier contracts and advised in negotiations bringing budgets down by 6%.",
-          "Created weekly labor finance reports and presented the results to management."
-        ]
-      }
-    ],
-    education = [
-      {
-        degree: "Diploma in Computer Engineering",
-        school: "University of Arizona",
-        period: "Aug 2006 — Oct 2008",
-        honors: "Graduated with High Honors."
-      },
-      {
-        degree: "Bachelor in Computer Engineering",
-        school: "University of Arizona",
-        period: "Aug 2004 — Oct 2006",
-        honors: "Graduated with High Honors."
-      }
-    ],
-    skills = [
-      "Solution Strategies", "Analytical Thinker", "Innovation", "Agile Methodologies",
-      "Effective Team leader", "Market Assessment", "Collaboration", "Creative Problem Solving",
-      "Customer-centric Selling", "Trend Analysis", "Source Control", "Networking"
-    ],
-    additionalInfo = {
-      languages: "English, French",
-      certificates: "Financial Analyst License",
-      awards: "Most Innovate Employer of the Year (2011), Overall Best Employee Division Two (2009)"
+const PrimeAts: React.FC<PrimeAtsProps> = ({ data, onChange }) => {
+  const { personalInfo, summary, experiences, education, skills, additionalInfo } = data;
+
+  // Fonction de mise à jour universelle
+  const handleUpdate = (path: string, val: any) => {
+    if (!onChange) return;
+
+    const newData = { ...data };
+    const keys = path.split('.');
+    let current: any = newData;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      current = current[keys[i]];
     }
-  } = data;
+    current[keys[keys.length - 1]] = val;
+    
+    onChange(newData);
+  };
+
+  const skillsArray = Array.isArray(skills) ? skills : [];
 
   return (
-    <div className="max-w-4xl mx-auto my-10 bg-white shadow-lg border border-gray-200 font-sans text-gray-800 antialiased print:shadow-none print:my-0">
+    <div className="w-[210mm] min-h-[297mm] mx-auto bg-white font-sans text-gray-800 antialiased shadow-sm group/cv">
       {/* Header Section */}
-      <header className="flex justify-between items-start p-8 border-b-2 border-blue-600">
+      <header className="flex justify-between items-start p-10 border-b-2 border-blue-600 bg-slate-50/30">
         <div className="flex-1">
-          <h1 className="text-4xl font-bold text-blue-700 uppercase tracking-tight">{name}</h1>
-          <h2 className="text-2xl font-semibold mt-1 text-gray-700">{title}</h2>
+          <h1 className="text-4xl font-bold text-blue-700 uppercase tracking-tight hover:bg-blue-50 transition-colors rounded px-1">
+            <EditableText 
+              value={personalInfo.fullName || "Votre Nom"} 
+              onSave={(v) => handleUpdate('personalInfo.fullName', v)} 
+            />
+          </h1>
+          <h2 className="text-2xl font-semibold mt-1 text-gray-700 hover:bg-slate-100 rounded px-1">
+            <EditableText 
+              value={personalInfo.jobTitle || "Titre du Poste"} 
+              onSave={(v) => handleUpdate('personalInfo.jobTitle', v)} 
+            />
+          </h2>
+          
           <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm text-gray-600">
-            {contact?.address && <span className="flex items-center gap-1.5"><MapPin size={14} className="text-blue-600" /> {contact.address}</span>}
-            {contact?.phone && <span className="flex items-center gap-1.5"><Phone size={14} className="text-blue-600" /> {contact.phone}</span>}
-            {contact?.email && <span className="flex items-center gap-1.5"><Mail size={14} className="text-blue-600" /> {contact.email}</span>}
+            <span className="flex items-center gap-1.5 p-1 hover:bg-slate-100 rounded">
+              <MapPin size={14} className="text-blue-600" /> 
+              <EditableText value={personalInfo.location} onSave={(v) => handleUpdate('personalInfo.location', v)} />
+            </span>
+            <span className="flex items-center gap-1.5 p-1 hover:bg-slate-100 rounded">
+              <Phone size={14} className="text-blue-600" /> 
+              <EditableText value={personalInfo.phone} onSave={(v) => handleUpdate('personalInfo.phone', v)} />
+            </span>
+            <span className="flex items-center gap-1.5 p-1 hover:bg-slate-100 rounded">
+              <Mail size={14} className="text-blue-600" /> 
+              <EditableText value={personalInfo.email} onSave={(v) => handleUpdate('personalInfo.email', v)} className="underline" />
+            </span>
           </div>
         </div>
-        <div className="ml-6 w-32 h-32 border border-gray-300 overflow-hidden rounded-sm flex-shrink-0">
-          <img 
-            src={profileImage} 
-            alt={name} 
-            className="w-full h-full object-cover"
-          />
-        </div>
+
+        {personalInfo.photo && (
+          <div className="ml-6 w-32 h-32 border-2 border-blue-100 overflow-hidden rounded-lg shadow-inner">
+            <img src={personalInfo.photo} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
       </header>
 
-      <div className="p-8 space-y-8">
+      <div className="p-10 space-y-8">
         {/* Summary */}
-        <section>
-          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-3 uppercase tracking-wider text-left">Summary</h3>
-          <p className="leading-relaxed text-gray-700 whitespace-pre-line">{summary}</p>
+        <section className="relative group/section">
+          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-3 uppercase tracking-wider">Résumé Professionnel</h3>
+          <div className="p-2 hover:bg-blue-50/50 rounded-lg border border-transparent hover:border-blue-100 transition-all">
+            <EditableText 
+              value={summary} 
+              onSave={(v) => handleUpdate('summary', v)} 
+              multiline 
+              className="leading-relaxed text-gray-700 text-sm italic"
+            />
+          </div>
         </section>
 
         {/* Professional Experience */}
         <section>
-          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-4 uppercase tracking-wider text-left">Professional Experience</h3>
+          <div className="flex justify-between items-center border-b border-blue-200 pb-1 mb-4">
+            <h3 className="text-lg font-bold text-blue-700 uppercase tracking-wider">Expériences Professionnelles</h3>
+          </div>
           <div className="space-y-6">
-            {experience.map((exp, index) => (
-              <div key={index}>
+            {experiences.map((exp, index) => (
+              <div key={index} className="relative group/item p-2 hover:bg-slate-50 rounded-xl transition-all">
                 <div className="flex justify-between items-baseline mb-1">
-                  <h4 className="font-bold text-lg text-gray-900">{exp.role}, {exp.company}</h4>
-                  <span className="text-sm font-bold text-gray-600 whitespace-nowrap">{exp.period}</span>
+                  <h4 className="font-bold text-lg text-gray-900 flex gap-2">
+                    <EditableText value={exp.role} onSave={(v) => handleUpdate(`experiences.${index}.role`, v)} />
+                    <span className="text-gray-300 font-light">|</span>
+                    <EditableText value={exp.company} onSave={(v) => handleUpdate(`experiences.${index}.company`, v)} />
+                  </h4>
+                  <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                    <EditableText value={exp.duration} onSave={(v) => handleUpdate(`experiences.${index}.duration`, v)} />
+                  </span>
                 </div>
-                <ul className="list-disc list-outside ml-5 space-y-1 text-gray-700">
-                  {exp.bullets.map((bullet, bIndex) => (
-                    <li key={bIndex}>{bullet}</li>
+                <div className="text-xs text-gray-400 uppercase font-bold mb-3 tracking-widest">
+                   <EditableText value={exp.location} onSave={(v) => handleUpdate(`experiences.${index}.location`, v)} />
+                </div>
+                <div className="ml-4 space-y-1.5">
+                  {exp.description.map((desc, j) => (
+                    <div key={j} className="flex items-start gap-3 group/desc">
+                      <span className="text-blue-400 mt-1.5 text-[8px]">●</span>
+                      <EditableText 
+                        value={desc} 
+                        onSave={(v) => {  
+                          const newDesc = [...exp.description];
+                          newDesc[j] = v;
+                          handleUpdate(`experiences.${index}.description`, newDesc);
+                        }}
+                        multiline 
+                        className="text-sm leading-relaxed text-gray-600 flex-1"
+                      />
+                    </div>
                   ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Education */}
-        <section>
-          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-4 uppercase tracking-wider text-left">Education</h3>
-          <div className="space-y-4">
-            {education.map((edu, index) => (
-              <div key={index} className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-gray-900">{edu.degree}</h4>
-                  <p className="text-gray-700">{edu.school}</p>
-                  {edu.honors && <p className="text-sm italic text-gray-500 mt-1">• {edu.honors}</p>}
                 </div>
-                <span className="text-sm font-bold text-gray-600 whitespace-nowrap">{edu.period}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Technical Skills */}
-        <section>
-          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-4 uppercase tracking-wider text-left">Technical Skills</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-2 gap-x-4 text-sm text-gray-700">
-            {skills.map((skill, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0"></span>
-                {skill}
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Education & Skills Grid */}
+        <div className="grid grid-cols-2 gap-10">
+          <section>
+            <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-4 uppercase tracking-wider">Formation</h3>
+            <div className="space-y-4">
+              {education.map((edu, index) => (
+                <div key={index} className="hover:bg-slate-50 p-1 rounded">
+                  <h4 className="font-bold text-gray-900 text-sm">
+                    <EditableText value={edu.degree} onSave={(v) => handleUpdate(`education.${index}.degree`, v)} />
+                  </h4>
+                  <p className="text-gray-600 text-xs">
+                    <EditableText value={edu.school} onSave={(v) => handleUpdate(`education.${index}.school`, v)} />
+                  </p>
+                  <p className="text-blue-600 font-bold text-[10px] mt-1">
+                    <EditableText value={edu.year} onSave={(v) => handleUpdate(`education.${index}.year`, v)} />
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-        {/* Additional Information */}
-        <section>
-          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-3 uppercase tracking-wider text-left">Additional Information</h3>
-          <ul className="space-y-2 text-sm text-gray-700">
-            {additionalInfo?.languages && <li><span className="font-bold">• Languages:</span> {additionalInfo.languages}</li>}
-            {additionalInfo?.certificates && <li><span className="font-bold">• Certificates:</span> {additionalInfo.certificates}</li>}
-            {additionalInfo?.awards && <li><span className="font-bold">• Awards/Activities:</span> {additionalInfo.awards}</li>}
-          </ul>
+          <section>
+            <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-4 uppercase tracking-wider">Compétences</h3>
+            <div className="flex flex-wrap gap-2">
+               <EditableText 
+                value={skillsArray.join(', ')} 
+                onSave={(v) => handleUpdate('skills', v.split(',').map((s: string) => s.trim()))} 
+                className="text-sm text-gray-700 leading-loose italic bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200 w-full"
+              />
+            </div>
+          </section>
+        </div>
+
+        {/* Footer info */}
+        <section className="bg-slate-900 p-6 rounded-2xl text-white shadow-xl">
+          <h3 className="text-blue-400 font-black text-xs uppercase tracking-[0.2em] mb-4">Informations Complémentaires</h3>
+          <div className="grid grid-cols-3 gap-4 text-xs">
+            <div>
+              <p className="text-slate-400 mb-1 font-bold">LANGUES</p>
+              <EditableText 
+                value={additionalInfo.languages.join(', ')} 
+                onSave={(v) => handleUpdate('additionalInfo.languages', v.split(',').map((s: string) => s.trim()))} 
+              />
+            </div>
+            <div>
+              <p className="text-slate-400 mb-1 font-bold">CERTIFICATIONS</p>
+              <EditableText 
+                value={additionalInfo.certifications.join(', ')} 
+                onSave={(v) => handleUpdate('additionalInfo.certifications', v.split(',').map((s: string) => s.trim()))} 
+              />
+            </div>
+            <div>
+              <p className="text-slate-400 mb-1 font-bold">LOISIRS</p>
+              <EditableText 
+                value={additionalInfo.interests.join(', ')} 
+                onSave={(v) => handleUpdate('additionalInfo.interests', v.split(',').map((s: string) => s.trim()))} 
+              />
+            </div>
+          </div>
         </section>
       </div>
     </div>

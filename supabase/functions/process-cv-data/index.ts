@@ -1,80 +1,95 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
+// 1. Configuration des headers CORS pour autoriser les requêtes depuis le navigateur
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  // 2. Gestion du Preflight (indispensable pour éviter l'erreur 500/CORS)
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
   try {
-    const { resumeText } = await req.json();
+    const { resumeText, language = "French" } = await req.json()
 
-    // On utilise l'API de Google Gemini ou OpenAI ici
-    // Voici un exemple de structure de prompt pour obtenir du JSON pur
-    const CV_EXTRACTION_PROMPT = `
-    Tu es un expert en recrutement et en analyse de données. Analyse le texte brut suivant issu d'un CV PDF et transforme-le en un objet JSON structuré.
-
-    RÈGLES DE NETTOYAGE STRICTES :
-    1. SUPPRESSION DES PUCES : Retire tous les symboles de puces (•, -, *, ■) au début des phrases dans les descriptions.
-    2. ENCODAGE : Corrige les erreurs d'encodage courantes (ex: remplace "d'Ã©tudes" par "d'études").
-    3. CONCIS : Reformule les descriptions trop longues pour qu'elles soient percutantes.
-    4. NORMALISATION : Assure-toi que les dates sont homogènes (ex: "Jan. 2020" ou "01/2020").
-    5. SÉCURITÉ : Si une information est illisible ou manquante, utilise une chaîne vide "" ou un tableau vide [].
-
-    STRUCTURE JSON ATTENDUE :
-    {
-      "personalInfo": { 
-        "fullName": "Prénom Nom", 
-        "jobTitle": "Titre du poste visé ou actuel", 
-        "email": "email@example.com", 
-        "phone": "06...", 
-        "location": "Ville, Pays",
-        "photo": "" 
-      },
-      "summary": "Bref résumé professionnel (2-3 phrases)",
-      "experiences": [
-        { 
-          "role": "Intitulé du poste", 
-          "company": "Nom de l'entreprise", 
-          "duration": "Dates (ex: 2020 - 2023)", 
-          "description": ["Action réalisée et résultat", "Responsabilité clé"] 
-        }
-      ],
-      "skills": ["Compétence 1", "Compétence 2"],
-      "education": [
-        { "degree": "Nom du diplôme", "school": "École/Université", "year": "Année" }
-      ]
+    if (!resumeText) {
+      throw new Error("Le texte du CV est manquant.")
     }
 
-    TEXTE À ANALYSER :
-    `;
-    const response = await fetch("https://api.openai.com/v1/chat/completions", { // Ou Google AI
-      method: "POST",
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!openaiApiKey) {
+      throw new Error("La clé API OpenAI n'est pas configurée sur Supabase.")
+    }
+
+    // 3. Le Prompt Expert pour l'extraction
+    const systemPrompt = `Tu es un expert ATS Parser. Extrais les données du texte brut pour remplir ce schéma JSON exact.
+    Langue de sortie : ${language}.
+    
+    RÈGLES :
+    - Retourne UNIQUEMENT du JSON.
+    - Si une info est manquante, utilise "" ou [].
+    - Découpe les expériences en points précis dans le tableau "description".
+
+    STRUCTURE JSON :
+    {
+      "personalInfo": { "fullName": "", "jobTitle": "", "email": "", "phone": "", "location": "", "photo": "" },
+      "summary": "",
+      "experiences": [{ "role": "", "company": "", "duration": "", "location": "", "description": [""] }],
+      "education": [{ "degree": "", "school": "", "year": "", "location": "" }],
+      "skills": [""],
+      "additionalInfo": { "languages": [""], "certifications": [""], "interests": [""] }
+    }`;
+
+    // 4. Appel à OpenAI
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Très bon pour l'extraction de données
-        messages: [{ role: "user", content: CV_EXTRACTION_PROMPT + "\n\n" + resumeText }],
-        response_format: { type: "json_object" }
+        model: 'gpt-4o-mini', // Modèle performant et économique
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Voici le texte à parser : ${resumeText}` }
+        ],
+        response_format: { type: "json_object" }, // Force la sortie JSON
+        temperature: 0.1, // Basse température pour plus de fidélité aux données
       }),
-    });
+    })
 
-    const data = await response.json();
-    const structuredData = JSON.parse(data.choices[0].message.content);
+    const aiData = await aiResponse.json()
+    
+    if (aiData.error) {
+      throw new Error(`OpenAI Error: ${aiData.error.message}`)
+    }
+    console.log("Réponse brute de l'IA :", aiData);
+    let content = aiData.choices[0].message.content;
+    content = content.replace(/^```json/i, "").replace(/```$/i, "").trim();
+    console.log("text:", resumeText);
+    const extractedData = JSON.parse(content);
 
-    return new Response(JSON.stringify(structuredData), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    // 5. Retour des données au Frontend
+    return new Response(
+      JSON.stringify(extractedData),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    console.error("Function Error:", error.message)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    )
   }
 })
