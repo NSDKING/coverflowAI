@@ -1,11 +1,10 @@
-// components/CVRenderer.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { CVData } from '@/utils/types';
 import EditableText from './EditableText';
 
-// Import de tes templates
+// Import templates
 import PrimeAts from './templates/PrimeAts';
 import MinimalAts from './templates/MinimalAts';
 import Classic from './templates/Classic';
@@ -19,115 +18,143 @@ interface Props {
 }
 
 export default function CVRenderer({ data, templateId, profileImage, onChange }: Props) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isAdjusting = useRef(false); // Prevents feedback loops
   
-  /**
-   * LOGIQUE DE MISE À JOUR DYNAMIQUE
-   * Permet de modifier une valeur n'importe où dans l'objet via un chemin (ex: "experiences.0.role")
-   */
+  const [layoutMode, setLayoutMode] = useState<'normal' | 'tight' | 'extra-tight'>('normal');
+  const [scale, setScale] = useState(1);
+
+  // 1. Move the layout variables into a memo to prevent object creation on every render
+  const layoutVars = useMemo(() => ({
+    'normal': { gap: '1.5rem', padding: '3rem', itemGap: '1rem' },
+    'tight': { gap: '1rem', padding: '2rem', itemGap: '0.5rem' },
+    'extra-tight': { gap: '0.5rem', padding: '1.5rem', itemGap: '0.25rem' }
+  }[layoutMode]), [layoutMode]);
+
+  useEffect(() => {
+    const adjustLayout = () => {
+      // If we are already in the middle of an adjustment, skip to avoid loops
+      if (isAdjusting.current) return;
+      
+      const content = contentRef.current;
+      if (!content) return;
+
+      const A4_HEIGHT_PX = 1122;
+      const BUFFER = 5; // Ignore tiny overflows
+
+      isAdjusting.current = true;
+
+      // We measure the current height without resetting to 'normal' first.
+      // We only reset if the content is significantly too small.
+      let currentHeight = content.scrollHeight;
+
+      if (currentHeight > A4_HEIGHT_PX + BUFFER) {
+        if (layoutMode === 'normal') {
+          setLayoutMode('tight');
+        } else if (layoutMode === 'tight') {
+          setLayoutMode('extra-tight');
+        } else if (layoutMode === 'extra-tight' && scale === 1) {
+          const finalScale = A4_HEIGHT_PX / currentHeight;
+          setScale(Math.max(finalScale, 0.85));
+        }
+      } else if (currentHeight < A4_HEIGHT_PX - 100) {
+        // Only expand back if we have massive room, to prevent "vibration"
+        if (scale < 1) {
+          setScale(1);
+        } else if (layoutMode === 'extra-tight') {
+          setLayoutMode('tight');
+        } else if (layoutMode === 'tight') {
+          setLayoutMode('normal');
+        }
+      }
+
+      // Short delay before allowing the next adjustment
+      setTimeout(() => {
+        isAdjusting.current = false;
+      }, 100);
+    };
+
+    // Use a small debounce for the ResizeObserver
+    const observer = new ResizeObserver(() => {
+        requestAnimationFrame(adjustLayout);
+    });
+
+    if (contentRef.current) observer.observe(contentRef.current);
+    
+    return () => observer.disconnect();
+  }, [data, templateId, layoutMode, scale]); // Logic now reacts to state shifts safely
+
   const handleUpdate = (path: string, newValue: any) => {
     if (!onChange) return;
-
-    // 1. On crée une copie profonde pour éviter de muter l'état directement
     const newData = JSON.parse(JSON.stringify(data));
     const keys = path.split('.');
     let current = newData;
-
-    // 2. On parcourt l'objet jusqu'à l'avant-dernière clé
     for (let i = 0; i < keys.length - 1; i++) {
-      const key = keys[i];
-      // Si la clé est un index de tableau (ex: "0", "1")
-      const accessKey = isNaN(Number(key)) ? key : Number(key);
+      const accessKey = isNaN(Number(keys[i])) ? keys[i] : Number(keys[i]);
       current = current[accessKey];
     }
-
-    // 3. On applique la nouvelle valeur sur la dernière clé
-    const lastKey = keys[keys.length - 1];
-    const finalKey = isNaN(Number(lastKey)) ? lastKey : Number(lastKey);
-    current[finalKey] = newValue;
-
-    // 4. On renvoie l'objet complet mis à jour au parent
+    current[isNaN(Number(keys[keys.length - 1])) ? keys[keys.length - 1] : Number(keys[keys.length - 1])] = newValue;
     onChange(newData);
   };
 
-  if (!data) return null;
-
-  /**
-   * FORMATTAGE DES DONNÉES (Adapter)
-   * On prépare les alias pour que les templates ATS ou Classiques reçoivent 
-   * les données dans le format qu'ils attendent.
-   */
   const formattedData = {
     ...data,
-    name: data.personalInfo?.fullName,
-    title: data.personalInfo?.jobTitle,
-    profileImage: profileImage || data.personalInfo?.photo,
-    contact: {
-      address: data.personalInfo?.location,
-      phone: data.personalInfo?.phone,
-      email: data.personalInfo?.email,
-    },
-    // On passe les outils d'édition directement aux templates
     handleUpdate,
     EditableText
   };
 
-  /**
-   * SÉLECTEUR DE TEMPLATE
-   */
   const renderTemplate = () => {
-    switch (templateId) {
-      case 'modern':
-      case 'professional':
-        return <Professional data={formattedData} />;
-      
-      case 'prime-ats':
-        return <PrimeAts data={formattedData} />;
-
-      case 'minimal':
-        return (
-          <MinimalAts 
-            data={{
-              ...formattedData,
-              // Adaptation spécifique pour MinimalAts si nécessaire
-              skills: {
-                technical: data.skills?.slice(0, 5) || [],
-                soft: data.skills?.slice(5, 10) || []
-              }
-            }} 
-          />
-        );
-
-      case 'classic':
-        return <Classic data={formattedData} />;
-
-      default:
-        return (
-          <div className="p-20 bg-white text-slate-900 text-center border-2 border-dashed border-slate-200 rounded-3xl">
-            <h2 className="text-xl font-bold">Design non trouvé</h2>
-            <p className="text-slate-500">Veuillez sélectionner un autre template.</p>
-          </div>
-        );
-    }
+    const templates = {
+      modern: Professional,
+      professional: Professional,
+      'prime-ats': PrimeAts,
+      minimal: MinimalAts,
+      classic: Classic,
+    };
+    const SelectedTemplate = templates[templateId as keyof typeof templates] || Professional;
+    return <SelectedTemplate data={formattedData} />;
   };
 
   return (
-    <div className="flex flex-col items-center">
-      {/* Container au format A4 réel */}
+    <div className="flex flex-col items-center py-10 bg-slate-100 min-h-screen">
       <div 
-        className="bg-white shadow-[0_0_50px_rgba(0,0,0,0.1)] transition-transform duration-500 ease-in-out"
+        className="bg-white shadow-2xl border border-slate-200 transition-all duration-500 ease-in-out"
         style={{
           width: '210mm',
-          minHeight: '297mm',
+          height: '297mm',
           margin: '0 auto',
+          position: 'relative',
+          // Dynamic variables
+          ...({
+            '--cv-padding': layoutVars.padding,
+            '--cv-gap': layoutVars.gap,
+            '--cv-item-gap': layoutVars.itemGap,
+          } as any)
         }}
       >
-        {renderTemplate()}
+        <div 
+          ref={contentRef}
+          className="origin-top transition-transform duration-500 ease-in-out"
+          style={{ 
+            transform: `scale(${scale})`,
+            width: '100%',
+          }}
+        >
+          {renderTemplate()}
+        </div>
       </div>
 
-      {/* Message d'aide discret en bas du CV */}
-      <div className="mt-4 flex items-center gap-2 text-slate-400 text-xs font-medium bg-white/50 px-4 py-2 rounded-full border border-slate-200">
-        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-        Mode édition active : Double-cliquez sur n'importe quel texte pour le modifier
+      {/* Status Indicators */}
+      <div className="mt-6 flex gap-3">
+         <div className="flex items-center gap-2 text-slate-500 text-[10px] font-bold uppercase tracking-wider bg-white px-4 py-2 rounded-full border shadow-sm">
+            <span className={`w-2 h-2 rounded-full ${layoutMode !== 'normal' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+            Mode: {layoutMode}
+         </div>
+         {scale < 1 && (
+            <div className="flex items-center gap-2 text-amber-700 text-[10px] font-bold uppercase tracking-wider bg-amber-50 px-4 py-2 rounded-full border border-amber-200 shadow-sm">
+                Compression: {Math.round((1 - scale) * 100)}%
+            </div>
+         )}
       </div>
     </div>
   );

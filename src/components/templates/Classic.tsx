@@ -20,17 +20,25 @@ const Classic = ({ data }: ClassicProps) => {
   const skillsArray = Array.isArray(skills) ? skills : [];
 
   return (
-    <div className="bg-white p-14 font-serif text-slate-900 shadow-sm min-h-[297mm] w-[210mm] mx-auto transition-all">
+    <div 
+      className="bg-white font-serif text-slate-900 shadow-sm transition-all h-full"
+      style={{
+        padding: 'var(--cv-padding)', // Dynamic padding
+      }}
+    >
       
-      {/* Header - Sobre et Institutionnel */}
-      <header className="text-center mb-10 border-b-2 border-slate-900 pb-8">
-        <h1 className="text-3xl font-bold tracking-tight uppercase mb-2 hover:bg-slate-50 rounded transition-colors cursor-pointer">
+      {/* Header */}
+      <header 
+        className="text-center border-b-2 border-slate-900"
+        style={{ marginBottom: 'var(--cv-gap)', paddingBottom: 'var(--cv-item-gap)' }}
+      >
+        <h1 className="text-3xl font-bold tracking-tight uppercase mb-1">
           <EditableText 
             value={personalInfo.fullName || "Votre Nom"} 
             onSave={(v) => onSave('personalInfo.fullName', v)} 
           />
         </h1>
-        <h2 className="text-sm font-medium tracking-[0.3em] text-slate-500 uppercase mb-4">
+        <h2 className="text-sm font-medium tracking-[0.3em] text-slate-500 uppercase mb-2">
           <EditableText 
             value={personalInfo.jobTitle || "Titre du Poste"} 
             onSave={(v) => onSave('personalInfo.jobTitle', v)} 
@@ -38,29 +46,28 @@ const Classic = ({ data }: ClassicProps) => {
         </h2>
         
         <div className="flex justify-center flex-wrap gap-x-4 gap-y-1 text-[11px] font-sans font-semibold text-slate-600 uppercase tracking-wider">
-          <span className="hover:text-black cursor-pointer"><EditableText value={personalInfo.location} onSave={(v) => onSave('personalInfo.location', v)} /></span>
+          <span><EditableText value={personalInfo.location} onSave={(v) => onSave('personalInfo.location', v)} /></span>
           <span className="text-slate-300">|</span>
-          <span className="hover:text-black cursor-pointer"><EditableText value={personalInfo.phone} onSave={(v) => onSave('personalInfo.phone', v)} /></span>
+          <span><EditableText value={personalInfo.phone} onSave={(v) => onSave('personalInfo.phone', v)} /></span>
           <span className="text-slate-300">|</span>
-          <span className="hover:text-black cursor-pointer underline underline-offset-2"><EditableText value={personalInfo.email} onSave={(v) => onSave('personalInfo.email', v)} /></span>
+          <span className="underline underline-offset-2"><EditableText value={personalInfo.email} onSave={(v) => onSave('personalInfo.email', v)} /></span>
         </div>
       </header>
 
       {/* Profil */}
       <Section title="Profil">
-        <div className="p-2 hover:bg-slate-50 rounded-lg transition-all">
-          <EditableText 
-            value={summary} 
-            onSave={(v) => onSave('summary', v)} 
-            multiline 
-            className="text-[13px] leading-relaxed text-justify italic font-sans text-slate-700"
-          />
-        </div>
+        <EditableText 
+          value={summary} 
+          onSave={(v) => onSave('summary', v)} 
+          multiline 
+          className="text-[13px] leading-relaxed text-justify italic font-sans text-slate-700"
+        />
       </Section>
 
-      {/* Expérience - Le cœur du CV */}
+      {/* Expérience */}
       <Section title="Expérience">
-        <div className="space-y-8">
+        {/* Dynamic spacing between jobs */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}>
           {experiences.map((job, i) => (
             <div key={i} className="group">
               <div className="flex justify-between items-baseline mb-1">
@@ -73,10 +80,10 @@ const Classic = ({ data }: ClassicProps) => {
                   <EditableText value={job.duration} onSave={(v) => onSave(`experiences.${i}.duration`, v)} />
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 uppercase font-bold mb-3">
+              <div className="text-[10px] text-slate-400 uppercase font-bold mb-2">
                 <EditableText value={job.location} onSave={(v) => onSave(`experiences.${i}.location`, v)} />
               </div>
-              <div className="space-y-1.5 border-l border-slate-100 ml-1 pl-4">
+              <div className="space-y-1 border-l border-slate-100 ml-1 pl-4">
                 {job.description.map((desc, j) => (
                   <div key={j} className="flex items-start gap-3">
                     <span className="text-[8px] mt-1.5 text-slate-300">●</span>
@@ -88,7 +95,7 @@ const Classic = ({ data }: ClassicProps) => {
                         onSave(`experiences.${i}.description`, newDesc);
                       }}
                       multiline 
-                      className="text-[12px] leading-relaxed text-slate-600 hover:text-black transition-colors"
+                      className="text-[12px] leading-relaxed text-slate-600"
                     />
                   </div>
                 ))}
@@ -100,9 +107,9 @@ const Classic = ({ data }: ClassicProps) => {
 
       {/* Formation */}
       <Section title="Formation">
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
           {education.map((edu, i) => (
-            <div key={i} className="flex justify-between items-start hover:bg-slate-50 p-1 rounded">
+            <div key={i} className="flex justify-between items-start">
               <div className="flex-1">
                 <h3 className="font-bold text-[13px] uppercase">
                   <EditableText value={edu.school} onSave={(v) => onSave(`education.${i}.school`, v)} />
@@ -115,20 +122,17 @@ const Classic = ({ data }: ClassicProps) => {
                 <p className="text-[11px] font-sans font-bold text-slate-400">
                   <EditableText value={edu.year} onSave={(v) => onSave(`education.${i}.year`, v)} />
                 </p>
-                <p className="text-[9px] uppercase tracking-tighter text-slate-300">
-                  <EditableText value={edu.location} onSave={(v) => onSave(`education.${i}.location`, v)} />
-                </p>
               </div>
             </div>
           ))}
         </div>
       </Section>
 
-      {/* Compétences & Langues - Grid plus compacte */}
+      {/* Expertise */}
       <Section title="Expertise">
         <div className="grid grid-cols-2 gap-8 text-[12px]">
-          <div className="space-y-2">
-            <h4 className="font-sans font-black text-[9px] uppercase tracking-widest text-slate-400">Compétences clés</h4>
+          <div className="space-y-1">
+            <h4 className="font-sans font-black text-[9px] uppercase tracking-widest text-slate-400">Compétences</h4>
             <div className="p-2 bg-slate-50 rounded">
               <EditableText 
                 value={skillsArray.join(', ')} 
@@ -137,9 +141,9 @@ const Classic = ({ data }: ClassicProps) => {
               />
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <h4 className="font-sans font-black text-[9px] uppercase tracking-widest text-slate-400">Langues & Loisirs</h4>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
                <p className="flex gap-2">
                  <span className="font-bold italic">Langues:</span>
                  <EditableText value={additionalInfo.languages.join(', ')} onSave={(v) => onSave('additionalInfo.languages', v.split(',').map((s: string) => s.trim()))} />
@@ -155,7 +159,10 @@ const Classic = ({ data }: ClassicProps) => {
 
       {/* Footer Certifications */}
       {additionalInfo.certifications.length > 0 && (
-        <div className="mt-12 pt-6 border-t border-slate-100 text-[10px] uppercase font-sans tracking-[0.2em] text-slate-400 text-center">
+        <div 
+          className="border-t border-slate-100 text-[10px] uppercase font-sans tracking-[0.2em] text-slate-400 text-center"
+          style={{ marginTop: 'var(--cv-gap)', paddingTop: 'var(--cv-item-gap)' }}
+        >
           <span className="font-black text-slate-900 mr-3">Certifications:</span>
           <EditableText 
             value={additionalInfo.certifications.join(' — ')} 
@@ -167,10 +174,13 @@ const Classic = ({ data }: ClassicProps) => {
   );
 };
 
-// --- Helper Component ---
+// --- Updated Helper Component ---
 
 const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
-  <div className="flex mb-10 group/sec">
+  <div 
+    className="flex group/sec"
+    style={{ marginBottom: 'var(--cv-gap)' }} // Use dynamic gap here
+  >
     <div className="w-[100px] flex-shrink-0 pt-1">
       <h2 className="text-[10px] font-sans font-black tracking-[0.25em] uppercase text-slate-300 group-hover/sec:text-slate-900 transition-colors">
         {title}

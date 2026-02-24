@@ -20,9 +20,20 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
   const skillsArray = Array.isArray(skills) ? skills : [];
 
   return (
-    <div className="w-[210mm] min-h-[297mm] mx-auto bg-white p-16 font-serif text-gray-900 leading-tight shadow-sm transition-all duration-300">
+    <div 
+      className="mx-auto bg-white font-serif text-gray-900 leading-tight transition-all duration-300 h-full"
+      style={{
+        padding: 'var(--cv-padding)', // Dynamic padding from CVRenderer
+      }}
+    >
       {/* Header */}
-      <header className="flex flex-col items-center text-center border-b-2 border-black pb-8 mb-10">
+      <header 
+        className="flex flex-col items-center text-center border-b-2 border-black"
+        style={{ 
+          paddingBottom: 'var(--cv-gap)', 
+          marginBottom: 'var(--cv-gap)' 
+        }}
+      >
         <h1 className="text-5xl font-bold mb-4 tracking-tighter uppercase hover:bg-gray-50 rounded px-4 py-1 transition-colors">
           <EditableText 
             value={personalInfo.fullName || "NOM PRÉNOM"} 
@@ -46,9 +57,11 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
       </header>
 
       {/* Summary */}
-      <section className="mb-12">
-        <h3 className="text-sm font-sans font-black border-b border-gray-200 mb-4 uppercase tracking-[0.2em] text-gray-500">Professional Summary</h3>
-        <div className="p-2 hover:bg-gray-50 rounded-lg transition-all italic text-gray-700">
+      <section style={{ marginBottom: 'var(--cv-gap)' }}>
+        <h3 className="text-sm font-sans font-black border-b border-gray-200 uppercase tracking-[0.2em] text-gray-500 mb-2">
+          Professional Summary
+        </h3>
+        <div className="italic text-gray-700">
           <EditableText 
             value={summary} 
             onSave={(v) => onSave('summary', v)} 
@@ -59,12 +72,15 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
       </section>
 
       {/* Experience */}
-      <section className="mb-12">
-        <h3 className="text-sm font-sans font-black border-b border-gray-200 mb-6 uppercase tracking-[0.2em] text-gray-500">Professional Experience</h3>
-        <div className="space-y-10">
+      <section style={{ marginBottom: 'var(--cv-gap)' }}>
+        <h3 className="text-sm font-sans font-black border-b border-gray-200 uppercase tracking-[0.2em] text-gray-500 mb-4">
+          Professional Experience
+        </h3>
+        {/* Dynamic gap between job entries */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}>
           {experiences.map((item, idx) => (
             <div key={idx} className="group relative">
-              <div className="flex justify-between items-baseline mb-2">
+              <div className="flex justify-between items-baseline mb-1">
                 <h4 className="font-bold text-[16px] flex gap-2">
                   <EditableText value={item.role} onSave={(v) => onSave(`experiences.${idx}.role`, v)} />
                   <span className="font-normal text-gray-400">at</span>
@@ -75,11 +91,11 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
                 </span>
               </div>
               
-              <div className="font-sans text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-4">
+              <div className="font-sans text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-2">
                 <EditableText value={item.location} onSave={(v) => onSave(`experiences.${idx}.location`, v)} />
               </div>
 
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
                 {item.description.map((desc, j) => (
                   <div key={j} className="flex items-start gap-3 group/line">
                     <span className="text-black mt-1.5 text-[6px]">■</span>
@@ -91,7 +107,7 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
                         onSave(`experiences.${idx}.description`, newDesc);
                       }}
                       multiline 
-                      className="text-[13px] leading-snug text-gray-800 flex-1 hover:text-black transition-colors"
+                      className="text-[13px] leading-snug text-gray-800 flex-1"
                     />
                   </div>
                 ))}
@@ -102,16 +118,18 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
       </section>
 
       {/* Education */}
-      <section className="mb-12">
-        <h3 className="text-sm font-sans font-black border-b border-gray-200 mb-6 uppercase tracking-[0.2em] text-gray-500">Education</h3>
-        <div className="space-y-6">
+      <section style={{ marginBottom: 'var(--cv-gap)' }}>
+        <h3 className="text-sm font-sans font-black border-b border-gray-200 uppercase tracking-[0.2em] text-gray-500 mb-4">
+          Education
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
           {education.map((edu, idx) => (
-            <div key={idx} className="flex justify-between items-start hover:bg-gray-50 p-2 rounded transition-colors">
+            <div key={idx} className="flex justify-between items-start">
               <div>
                 <h4 className="font-bold text-[14px] uppercase tracking-tight">
                   <EditableText value={edu.degree} onSave={(v) => onSave(`education.${idx}.degree`, v)} />
                 </h4>
-                <p className="italic text-gray-600 text-[13px] mt-1">
+                <p className="italic text-gray-600 text-[13px]">
                   <EditableText value={edu.school} onSave={(v) => onSave(`education.${idx}.school`, v)} />
                 </p>
               </div>
@@ -124,12 +142,17 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
       </section>
 
       {/* Skills & Info */}
-      <section className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
-        <h3 className="text-sm font-sans font-black mb-6 uppercase tracking-[0.2em] text-gray-500">Expertise & Skills</h3>
-        <div className="grid grid-cols-1 gap-6 text-[13px]">
-          <div className="flex flex-col gap-2">
+      <section 
+        className="bg-gray-50 rounded-2xl border border-gray-100"
+        style={{ padding: 'var(--cv-item-gap)' }}
+      >
+        <h3 className="text-sm font-sans font-black uppercase tracking-[0.2em] text-gray-500 mb-4">
+          Expertise & Skills
+        </h3>
+        <div className="grid grid-cols-1 gap-4 text-[13px]">
+          <div className="flex flex-col gap-1">
             <span className="font-sans font-black uppercase text-[10px] text-gray-400">Core Expertise</span>
-            <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-2 bg-white rounded-xl border border-gray-200 shadow-sm">
               <EditableText 
                 value={skillsArray.join(' • ')} 
                 onSave={(v) => onSave('skills', v.split('•').map((s: string) => s.trim()))} 
@@ -138,8 +161,8 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-8">
-            <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col">
               <span className="font-sans font-black uppercase text-[10px] text-gray-400">Languages</span>
               <EditableText 
                 value={additionalInfo.languages.join(', ')} 
@@ -147,7 +170,7 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
                 className="font-medium text-gray-800"
               />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
               <span className="font-sans font-black uppercase text-[10px] text-gray-400">Interests</span>
               <EditableText 
                 value={additionalInfo.interests.join(', ')} 
@@ -162,4 +185,4 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
   );
 };
 
-export default MinimalAts;  
+export default MinimalAts;

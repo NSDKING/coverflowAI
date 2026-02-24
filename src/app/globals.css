@@ -21,6 +21,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  /* Change these from dynamic state to fixed values to stop the movement */
+  --cv-padding: 1.5rem; 
+  --cv-gap: 1rem;
+  --cv-item-gap: 0.5rem;
+}
 @layer base {
   :root {
     --background: 0 0% 100%;
