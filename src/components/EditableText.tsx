@@ -1,5 +1,4 @@
-// components/EditableText.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Props {
   value: string;
@@ -11,14 +10,27 @@ interface Props {
 export default function EditableText({ value, onSave, multiline, className }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
-
+  
+  // Update local state if external data changes
   useEffect(() => { setTempValue(value); }, [value]);
 
+  // Common styles to prevent jumping
+  // We use border-transparent in display mode so the 2px border space is always there.
+  const sharedStyles = `
+    w-full transition-all duration-200 rounded
+    ${className} 
+    border-2 p-1 
+    leading-inherit font-inherit text-inherit
+  `;
+
   if (isEditing) {
+    const editStyles = `${sharedStyles} bg-blue-50 border-blue-400 outline-none shadow-inner`;
+    
     return multiline ? (
       <textarea
         autoFocus
-        className={`w-full bg-blue-50 border-2 border-blue-400 rounded outline-none p-1 ${className}`}
+        rows={3}
+        className={`${editStyles} block resize-none`}
         value={tempValue}
         onChange={(e) => setTempValue(e.target.value)}
         onBlur={() => { setIsEditing(false); onSave(tempValue); }}
@@ -26,11 +38,16 @@ export default function EditableText({ value, onSave, multiline, className }: Pr
     ) : (
       <input
         autoFocus
-        className={`w-full bg-blue-50 border-2 border-blue-400 rounded outline-none p-1 ${className}`}
+        className={editStyles}
         value={tempValue}
         onChange={(e) => setTempValue(e.target.value)}
         onBlur={() => { setIsEditing(false); onSave(tempValue); }}
-        onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditing(false); onSave(tempValue); } }}
+        onKeyDown={(e) => { 
+          if (e.key === 'Enter') { 
+            setIsEditing(false); 
+            onSave(tempValue); 
+          } 
+        }}
       />
     );
   }
@@ -38,10 +55,16 @@ export default function EditableText({ value, onSave, multiline, className }: Pr
   return (
     <span 
       onDoubleClick={() => setIsEditing(true)}
-      className={`cursor-edit hover:bg-blue-50/50 hover:ring-2 hover:ring-blue-200 rounded transition-all ${className}`}
+      className={`
+        ${sharedStyles}
+        inline-block
+        cursor-text
+        border-transparent 
+        hover:bg-blue-50/50 hover:border-blue-200 
+      `}
       title="Double-cliquez pour éditer"
     >
-      {value || <span className="text-slate-300 italic">Vide...</span>}
+      {value || <span className="opacity-40 italic">Vide...</span>}
     </span>
   );
 }
