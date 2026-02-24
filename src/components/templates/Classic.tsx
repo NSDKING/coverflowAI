@@ -3,6 +3,7 @@
 import React from 'react';
 import { CVData } from '@/utils/types';
 import EditableText from '../EditableText';
+import { Trash2 } from 'lucide-react';
 
 interface ClassicProps {
   data: CVData;
@@ -17,14 +18,18 @@ const Classic = ({ data }: ClassicProps) => {
     }
   };
 
+  const removeSectionItem = (path: string, index: number) => {
+    if (data && (data as any).removeItem) {
+      (data as any).removeItem(path, index);
+    }
+  };
+
   const skillsArray = Array.isArray(skills) ? skills : [];
 
   return (
     <div 
       className="bg-white font-serif text-slate-900 shadow-sm transition-all h-full"
-      style={{
-        padding: 'var(--cv-padding)', // Dynamic padding
-      }}
+      style={{ padding: 'var(--cv-padding)' }}
     >
       
       {/* Header */}
@@ -66,10 +71,17 @@ const Classic = ({ data }: ClassicProps) => {
 
       {/* Expérience */}
       <Section title="Expérience">
-        {/* Dynamic spacing between jobs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}>
           {experiences.map((job, i) => (
-            <div key={i} className="group">
+            <div key={i} className="group relative">
+              {/* Delete Button */}
+              <button 
+                onClick={() => removeSectionItem('experiences', i)}
+                className="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+              >
+                <Trash2 size={14} />
+              </button>
+
               <div className="flex justify-between items-baseline mb-1">
                 <h3 className="font-bold text-sm uppercase tracking-tight">
                   <EditableText value={job.role} onSave={(v) => onSave(`experiences.${i}.role`, v)} />
@@ -83,7 +95,10 @@ const Classic = ({ data }: ClassicProps) => {
               <div className="text-[10px] text-slate-400 uppercase font-bold mb-2">
                 <EditableText value={job.location} onSave={(v) => onSave(`experiences.${i}.location`, v)} />
               </div>
-              <div className="space-y-1 border-l border-slate-100 ml-1 pl-4">
+              <div 
+                className="border-l border-slate-100 ml-1 pl-4"
+                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}
+              >
                 {job.description.map((desc, j) => (
                   <div key={j} className="flex items-start gap-3">
                     <span className="text-[8px] mt-1.5 text-slate-300">●</span>
@@ -109,7 +124,13 @@ const Classic = ({ data }: ClassicProps) => {
       <Section title="Formation">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
           {education.map((edu, i) => (
-            <div key={i} className="flex justify-between items-start">
+            <div key={i} className="group relative flex justify-between items-start">
+               <button 
+                onClick={() => removeSectionItem('education', i)}
+                className="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+              >
+                <Trash2 size={14} />
+              </button>
               <div className="flex-1">
                 <h3 className="font-bold text-[13px] uppercase">
                   <EditableText value={edu.school} onSave={(v) => onSave(`education.${i}.school`, v)} />
@@ -174,19 +195,17 @@ const Classic = ({ data }: ClassicProps) => {
   );
 };
 
-// --- Updated Helper Component ---
-
 const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
   <div 
     className="flex group/sec"
-    style={{ marginBottom: 'var(--cv-gap)' }} // Use dynamic gap here
+    style={{ marginBottom: 'var(--cv-gap)' }}
   >
     <div className="w-[100px] flex-shrink-0 pt-1">
       <h2 className="text-[10px] font-sans font-black tracking-[0.25em] uppercase text-slate-300 group-hover/sec:text-slate-900 transition-colors">
         {title}
       </h2>
     </div>
-    <div className="flex-1 pl-8 border-l border-slate-50 group-hover/sec:border-slate-200 transition-colors">
+    <div className="flex-1 pl-8 border-l border-slate-50 group-hover/sec:border-slate-200 transition-colors relative">
       {children}
     </div>
   </div>

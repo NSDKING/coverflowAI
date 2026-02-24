@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin, Trash2 } from 'lucide-react';
 import { CVData } from '@/utils/types';
 import EditableText from '../EditableText';
 
@@ -13,16 +13,18 @@ interface PrimeAtsProps {
 const PrimeAts: React.FC<PrimeAtsProps> = ({ data, onChange }) => {
   const { personalInfo, summary, experiences, education, skills, additionalInfo } = data;
 
+  // Uses the stable updater from CVRenderer
   const handleUpdate = (path: string, val: any) => {
-    if (!onChange) return;
-    const newData = { ...data };
-    const keys = path.split('.');
-    let current: any = newData;
-    for (let i = 0; i < keys.length - 1; i++) {
-      current = current[keys[i]];
+    if (data && (data as any).handleUpdate) {
+      (data as any).handleUpdate(path, val);
     }
-    current[keys[keys.length - 1]] = val;
-    onChange(newData);
+  };
+
+  // Uses the new stable remover from CVRenderer
+  const removeSectionItem = (path: string, index: number) => {
+    if (data && (data as any).removeItem) {
+      (data as any).removeItem(path, index);
+    }
   };
 
   const skillsArray = Array.isArray(skills) ? skills : [];
@@ -77,7 +79,7 @@ const PrimeAts: React.FC<PrimeAtsProps> = ({ data, onChange }) => {
           padding: 'var(--cv-padding)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 'var(--cv-gap)' // Elastic gap between sections
+          gap: 'var(--cv-gap)' 
         }}
       >
         {/* Summary */}
@@ -102,7 +104,16 @@ const PrimeAts: React.FC<PrimeAtsProps> = ({ data, onChange }) => {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}>
             {experiences.map((exp, index) => (
-              <div key={index} className="px-2">
+              <div key={index} className="px-2 group relative">
+                {/* Delete Button */}
+                <button 
+                  onClick={() => removeSectionItem('experiences', index)}
+                  className="absolute -left-6 top-1 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+                  title="Supprimer l'expérience"
+                >
+                  <Trash2 size={16} />
+                </button>
+
                 <div className="flex justify-between items-baseline mb-1">
                   <h4 className="font-bold text-lg text-gray-900 flex gap-2">
                     <EditableText value={exp.role} onSave={(v) => handleUpdate(`experiences.${index}.role`, v)} />
@@ -114,7 +125,7 @@ const PrimeAts: React.FC<PrimeAtsProps> = ({ data, onChange }) => {
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-widest">
-                   <EditableText value={exp.location} onSave={(v) => handleUpdate(`experiences.${index}.location`, v)} />
+                    <EditableText value={exp.location} onSave={(v) => handleUpdate(`experiences.${index}.location`, v)} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)', marginLeft: '1rem' }}>
                   {exp.description.map((desc, j) => (
@@ -144,7 +155,14 @@ const PrimeAts: React.FC<PrimeAtsProps> = ({ data, onChange }) => {
             <h3 className="text-lg font-bold text-blue-700 border-b border-blue-200 pb-1 mb-3 uppercase tracking-wider">Formation</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
               {education.map((edu, index) => (
-                <div key={index}>
+                <div key={index} className="group relative">
+                  {/* Delete Button for Education */}
+                  <button 
+                    onClick={() => removeSectionItem('education', index)}
+                    className="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                   <h4 className="font-bold text-gray-900 text-sm">
                     <EditableText value={edu.degree} onSave={(v) => handleUpdate(`education.${index}.degree`, v)} />
                   </h4>

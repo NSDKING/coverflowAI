@@ -52,7 +52,7 @@ export default function CVFactory() {
     if (step === 2) { setStep(1); setCvData(null); }
     else if (step === 3) { setStep(2); }
   };
-
+ 
   const handleInitialUpload = async (input: any) => {
     setStatus('parsing');
     try {

@@ -3,6 +3,7 @@
 import React from 'react';
 import { CVData } from '@/utils/types';
 import EditableText from '../EditableText';
+import { Trash2 } from 'lucide-react';
 
 interface MinimalAtsProps {
   data: CVData;
@@ -17,13 +18,20 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
     }
   };
 
+  // Helper for deleting items
+  const removeSectionItem = (path: string, index: number) => {
+    if (data && (data as any).removeItem) {
+      (data as any).removeItem(path, index);
+    }
+  };
+
   const skillsArray = Array.isArray(skills) ? skills : [];
 
   return (
     <div 
       className="mx-auto bg-white font-serif text-gray-900 leading-tight transition-all duration-300 h-full"
       style={{
-        padding: 'var(--cv-padding)', // Dynamic padding from CVRenderer
+        padding: 'var(--cv-padding)',
       }}
     >
       {/* Header */}
@@ -76,10 +84,18 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
         <h3 className="text-sm font-sans font-black border-b border-gray-200 uppercase tracking-[0.2em] text-gray-500 mb-4">
           Professional Experience
         </h3>
-        {/* Dynamic gap between job entries */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}>
           {experiences.map((item, idx) => (
             <div key={idx} className="group relative">
+              {/* Delete Button */}
+              <button 
+                onClick={() => removeSectionItem('experiences', idx)}
+                className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-1.5 bg-white rounded-full shadow-sm border border-gray-100"
+                title="Remove Experience"
+              >
+                <Trash2 size={14} />
+              </button>
+
               <div className="flex justify-between items-baseline mb-1">
                 <h4 className="font-bold text-[16px] flex gap-2">
                   <EditableText value={item.role} onSave={(v) => onSave(`experiences.${idx}.role`, v)} />
@@ -124,7 +140,13 @@ const MinimalAts: React.FC<MinimalAtsProps> = ({ data }) => {
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
           {education.map((edu, idx) => (
-            <div key={idx} className="flex justify-between items-start">
+            <div key={idx} className="group relative flex justify-between items-start">
+              <button 
+                onClick={() => removeSectionItem('education', idx)}
+                className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-1.5 bg-white rounded-full shadow-sm border border-gray-100"
+              >
+                <Trash2 size={14} />
+              </button>
               <div>
                 <h4 className="font-bold text-[14px] uppercase tracking-tight">
                   <EditableText value={edu.degree} onSave={(v) => onSave(`education.${idx}.degree`, v)} />

@@ -3,6 +3,7 @@
 import React from 'react';
 import { CVData } from '@/utils/types';
 import EditableText from '../EditableText';
+import { Trash2 } from 'lucide-react';
 
 interface ProfessionalProps {
   data: CVData;
@@ -17,6 +18,12 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
     }
   };
 
+  const removeSectionItem = (path: string, index: number) => {
+    if (data && (data as any).removeItem) {
+      (data as any).removeItem(path, index);
+    }
+  };
+
   const skillsArray = Array.isArray(skills) 
     ? skills 
     : (typeof skills === 'string' ? (skills as string).split(',') : []);
@@ -26,7 +33,7 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
       
       {/* SIDEBAR GAUCHE - EMERALD DARK */}
       <aside 
-        className="w-[33%] bg-[#064e3b] text-white flex flex-col transition-all"
+        className="w-[33%] bg-[#064e3b] text-white flex flex-col transition-all relative"
         style={{ paddingTop: 'var(--cv-padding)', paddingBottom: 'var(--cv-padding)' }}
       >
         
@@ -84,14 +91,14 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
                </div>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
-                {skillsArray.slice(0, 4).map((skill, i) => (
+                {skillsArray.slice(0, 6).map((skill, i) => (
                   <div key={i} className="space-y-1">
                     <div className="flex justify-between text-[9px] uppercase font-bold tracking-tighter">
                       <span>{skill}</span>
-                      <span className="text-emerald-400">85%</span>
+                      <span className="text-emerald-400">Directrice</span>
                     </div>
                     <div className="h-[3px] bg-white/10 w-full rounded-full overflow-hidden">
-                       <div className="h-full bg-emerald-400 w-[85%] rounded-full" />
+                       <div className="h-full bg-emerald-400 w-[90%] rounded-full" />
                     </div>
                   </div>
                 ))}
@@ -103,7 +110,7 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
 
       {/* CONTENU DROIT - MAIN CONTENT */}
       <main 
-        className="w-[67%] text-slate-800 bg-slate-50/30 transition-all"
+        className="w-[67%] text-slate-800 bg-slate-50/30 transition-all overflow-y-auto"
         style={{ padding: 'var(--cv-padding)', display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}
       >
         
@@ -122,13 +129,21 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-gap)' }}>
             {experiences.map((exp, i) => (
               <div key={i} className="group relative">
+                {/* Delete Button */}
+                <button 
+                  onClick={() => removeSectionItem('experiences', i)}
+                  className="absolute -left-10 top-0 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-2"
+                >
+                  <Trash2 size={16} />
+                </button>
+
                 <div className="flex justify-between items-baseline mb-2">
                   <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
                     <EditableText value={exp.role} onSave={(v) => onSave(`experiences.${i}.role`, v)} />
                     <span className="text-slate-300 font-light">@</span>
                     <EditableText value={exp.company} onSave={(v) => onSave(`experiences.${i}.company`, v)} />
                   </h3>
-                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100 shrink-0">
                     <EditableText value={exp.duration} onSave={(v) => onSave(`experiences.${i}.duration`, v)} />
                   </span>
                 </div>
@@ -161,7 +176,13 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
         <Section title="Formation">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-item-gap)' }}>
             {education.map((edu, i) => (
-              <div key={i} className="p-2 bg-white/50 rounded-lg border border-transparent hover:border-slate-100">
+              <div key={i} className="group relative p-2 bg-white/50 rounded-lg border border-transparent hover:border-slate-100">
+                <button 
+                  onClick={() => removeSectionItem('education', i)}
+                  className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-2"
+                >
+                  <Trash2 size={14} />
+                </button>
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-bold text-slate-900 text-[13px]">
@@ -184,9 +205,8 @@ const Professional: React.FC<ProfessionalProps> = ({ data }) => {
   );
 };
 
-// Helper Section component
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <section>
+  <section className="relative">
     <div className="flex items-center gap-4 mb-4">
       <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-[0.2em] shrink-0">{title}</h2>
       <div className="h-[1px] bg-slate-200 flex-1" />
