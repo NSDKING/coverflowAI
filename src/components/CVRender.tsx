@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Sparkles, Trash2, Layout, ZoomIn } from 'lucide-react';
+import { Sparkles, Layout, ZoomIn, Type, MinusCircle, PlusCircle, Maximize } from 'lucide-react';
 import { CVData } from '@/utils/types';
 import EditableText from './EditableText';
 
@@ -22,83 +22,87 @@ export default function CVRenderer({ data, templateId, profileImage, onChange }:
   const contentRef = useRef<HTMLDivElement>(null);
   const isAdjusting = useRef(false);
   
+  // 1. Scaling States
   const [layoutMode, setLayoutMode] = useState<'normal' | 'tight' | 'extra-tight'>('normal');
-  const [scale, setScale] = useState(1);
+  const [fontSizeMode, setFontSizeMode] = useState<'normal' | 'small' | 'tiny'>('normal');
+  const [internalScale, setInternalScale] = useState(1); // Fits content to A4
+  const [previewScale, setPreviewScale] = useState(0.75); // Fits A4 to your Screen
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  // 1. Define Layout Constants
-  const layoutVars = useMemo(() => ({
-    'normal': { gap: '2rem', padding: '3rem', itemGap: '1rem' },
-    'tight': { gap: '1.2rem', padding: '2rem', itemGap: '0.6rem' },
-    'extra-tight': { gap: '0.6rem', padding: '1.2rem', itemGap: '0.3rem' }
-  }[layoutMode]), [layoutMode]);
+  // 2. Define Layout Variables
+  const layoutVars = useMemo(() => {
+    const modes = {
+      'normal': { gap: '2rem', padding: '3rem', itemGap: '1rem' },
+      'tight': { gap: '1rem', padding: '1.8rem', itemGap: '0.5rem' },
+      'extra-tight': { gap: '0.4rem', padding: '1rem', itemGap: '0.2rem' }
+    };
+    const fonts = {
+      'normal': '14px',
+      'small': '13px',
+      'tiny': '12px'
+    };
+    return { ...modes[layoutMode], fontBase: fonts[fontSizeMode] };
+  }, [layoutMode, fontSizeMode]);
 
-  // 2. Logic: Auto-Squeeze with Hysteresis (Prevents Jitter)
+  // 3. Logic: The "Squeeze Ladder" (Content -> A4)
   useEffect(() => {
     const adjustLayout = () => {
       if (isAdjusting.current) return;
       const content = contentRef.current;
       if (!content) return;
 
-      const A4_HEIGHT_PX = 1122;
-      const SHRINK_THRESHOLD = A4_HEIGHT_PX + 5; 
-      const GROW_THRESHOLD = A4_HEIGHT_PX - 100; // Only grow back if there's significant room
+      const A4_HEIGHT_PX = 1122; // Height of A4 at 96 DPI
+      const SHRINK_THRESHOLD = A4_HEIGHT_PX + 2; 
+      const GROW_THRESHOLD = A4_HEIGHT_PX - 80;
 
       isAdjusting.current = true;
       let currentHeight = content.scrollHeight;
 
-      // SHRINK LOGIC
       if (currentHeight > SHRINK_THRESHOLD) {
         if (layoutMode === 'normal') setLayoutMode('tight');
         else if (layoutMode === 'tight') setLayoutMode('extra-tight');
-        else if (layoutMode === 'extra-tight' && scale === 1) {
-          const finalScale = A4_HEIGHT_PX / currentHeight;
-          setScale(Math.max(finalScale, 0.85));
+        else if (fontSizeMode === 'normal') setFontSizeMode('small');
+        else if (fontSizeMode === 'small') setFontSizeMode('tiny');
+        else if (internalScale === 1) {
+          setInternalScale(Math.max(A4_HEIGHT_PX / currentHeight, 0.80));
         }
       } 
-      // GROW LOGIC (Lazy expansion to prevent loops)
       else if (currentHeight < GROW_THRESHOLD) {
-        if (scale < 1) setScale(1);
+        if (internalScale < 1) setInternalScale(1);
+        else if (fontSizeMode === 'tiny') setFontSizeMode('small');
+        else if (fontSizeMode === 'small') setFontSizeMode('normal');
         else if (layoutMode === 'extra-tight') setLayoutMode('tight');
         else if (layoutMode === 'tight') setLayoutMode('normal');
       }
 
-      setTimeout(() => { isAdjusting.current = false; }, 150);
+      setTimeout(() => { isAdjusting.current = false; }, 100);
     };
 
     const observer = new ResizeObserver(() => requestAnimationFrame(adjustLayout));
     if (contentRef.current) observer.observe(contentRef.current);
     return () => observer.disconnect();
-  }, [data, templateId, layoutMode, scale]);
+  }, [data, layoutMode, fontSizeMode, internalScale]);
 
-  // 3. AI Fit to Page Function
-  const fitToPageWithAI = async () => {
-    setIsAiLoading(true);
-    try {
-      // Replace with your actual Supabase / AI endpoint
-      const response = await fetch('/api/ai/fit-to-page', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvData: data }),
-      });
-      const optimizedData = await response.json();
-      if (onChange) onChange(optimizedData);
-    } catch (error) {
-      console.error("AI adjustment failed", error);
-    } finally {
-      setIsAiLoading(false);
-    }
+  // 4. Viewport Helper: Fit A4 to Screen
+  const autoFitToWindow = () => {
+    const availableHeight = window.innerHeight - 250; // Padding for header/UI
+    const a4HeightPx = 1122;
+    setPreviewScale(Math.min(availableHeight / a4HeightPx, 1));
   };
 
-  // 4. Data Handlers passed to Templates
+  useEffect(() => {
+    autoFitToWindow();
+    window.addEventListener('resize', autoFitToWindow);
+    return () => window.removeEventListener('resize', autoFitToWindow);
+  }, []);
+
+  // 5. Shared Handlers
   const handleUpdate = (path: string, newValue: any) => {
     if (!onChange) return;
     const newData = JSON.parse(JSON.stringify(data));
     const keys = path.split('.');
     let current = newData;
-    for (let i = 0; i < keys.length - 1; i++) {
-      current = current[keys[i]];
-    }
+    for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]]; }
     current[keys[keys.length - 1]] = newValue;
     onChange(newData);
   };
@@ -108,9 +112,7 @@ export default function CVRenderer({ data, templateId, profileImage, onChange }:
     const newData = JSON.parse(JSON.stringify(data));
     const keys = path.split('.');
     let current = newData;
-    for (let i = 0; i < keys.length - 1; i++) {
-      current = current[keys[i]];
-    }
+    for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]]; }
     const targetArray = current[keys[keys.length - 1]];
     if (Array.isArray(targetArray)) {
       targetArray.splice(index, 1);
@@ -118,80 +120,82 @@ export default function CVRenderer({ data, templateId, profileImage, onChange }:
     }
   };
 
-  const formattedData = {
-    ...data,
-    handleUpdate,
-    removeItem,
-    EditableText
-  };
+  const formattedData = { ...data, handleUpdate, removeItem, EditableText };
 
   const renderTemplate = () => {
     const templates = {
-      modern: Professional,
-      professional: Professional,
       'prime-ats': PrimeAts,
       minimal: MinimalAts,
       classic: Classic,
+      professional: Professional,
     };
     const SelectedTemplate = templates[templateId as keyof typeof templates] || Professional;
     return <SelectedTemplate data={formattedData} />;
   };
 
   return (
-    <div className="flex flex-col items-center py-10 bg-slate-100 min-h-screen">
+    <div className="flex flex-col items-center py-10 bg-slate-100 min-h-screen overflow-x-hidden">
       
-      {/* 5. TOP TOOLBAR */}
-      <div className="mb-8 flex items-center gap-4 bg-white p-3 rounded-2xl shadow-xl border border-slate-200">
+      {/* TOOLBAR */}
+      <div className="mb-8 flex items-center gap-4 sticky top-5 z-50 bg-white/90 backdrop-blur px-4 py-2 rounded-2xl shadow-2xl border border-white/50">
         <button 
-          onClick={fitToPageWithAI}
-          disabled={isAiLoading}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
+          onClick={() => {/* AI Logic */}}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all"
         >
-          <Sparkles size={18} className={isAiLoading ? "animate-spin" : ""} />
-          {isAiLoading ? "Analyse en cours..." : "Ajuster par IA (1 Page)"}
+          <Sparkles size={16} /> Ajuster 1 Page
         </button>
-        
-        <div className="h-6 w-[1px] bg-slate-200 mx-2" />
-        
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-slate-600 text-xs font-bold px-3 py-1.5 bg-slate-50 rounded-lg">
-            <Layout size={14} />
-            <span>Mode: {layoutMode}</span>
-          </div>
-          {scale < 1 && (
-            <div className="flex items-center gap-2 text-amber-600 text-xs font-bold px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-100 animate-in fade-in zoom-in">
-              <ZoomIn size={14} />
-              <span>Zoom: {Math.round(scale * 100)}%</span>
-            </div>
-          )}
+
+        <div className="h-6 w-[1px] bg-slate-200" />
+
+        {/* View Zoom Controls */}
+        <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+          <button onClick={() => setPreviewScale(s => Math.max(s - 0.1, 0.3))} className="p-1 hover:bg-white rounded"><MinusCircle size={18}/></button>
+          <span className="text-xs font-mono font-bold w-10 text-center">{Math.round(previewScale * 100)}%</span>
+          <button onClick={() => setPreviewScale(s => Math.min(s + 0.1, 1.2))} className="p-1 hover:bg-white rounded"><PlusCircle size={18}/></button>
+          <button onClick={autoFitToWindow} className="ml-1 p-1 hover:bg-white rounded text-blue-600" title="Ajuster à l'écran">
+            <Maximize size={16} />
+          </button>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+          <Layout size={12}/> {layoutMode} 
+          <Type size={12} className="ml-2"/> {fontSizeMode}
         </div>
       </div>
 
-      {/* 6. CV CANVAS */}
+      {/* CV CANVAS */}
       <div 
-        className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden transition-all duration-700 ease-in-out"
+        className="transition-transform duration-500 ease-out shadow-[0_30px_60px_rgba(0,0,0,0.15)] bg-white"
         style={{
+          transform: `scale(${previewScale})`,
+          transformOrigin: 'top center',
           width: '210mm',
           height: '297mm',
-          position: 'relative',
+          marginBottom: `calc(297mm * ${previewScale - 1} + 50px)`, // Fixes the white space gap below
+          // CSS Variables for Template inheritance
           ...({
             '--cv-padding': layoutVars.padding,
             '--cv-gap': layoutVars.gap,
             '--cv-item-gap': layoutVars.itemGap,
+            '--cv-font-base': layoutVars.fontBase,
           } as any)
         }}
       >
         <div 
           ref={contentRef}
-          className="origin-top transition-transform duration-700 cubic-bezier(0.4, 0, 0.2, 1)"
-          style={{ transform: `scale(${scale})`, width: '100%' }}
+          className="origin-top"
+          style={{ 
+            transform: `scale(${internalScale})`, 
+            width: '100%',
+            fontSize: 'var(--cv-font-base)'
+          }}
         >
           {renderTemplate()}
         </div>
       </div>
 
-      <p className="mt-6 text-slate-400 text-[11px] font-medium uppercase tracking-widest">
-        A4 Format • Auto-fit active
+      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">
+        Standard A4 Format • Logiciel de Rendu v3.0
       </p>
     </div>
   );

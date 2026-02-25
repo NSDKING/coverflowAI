@@ -1,70 +1,53 @@
-import { useState, useEffect, useRef } from "react";
+'use client';
+
+import React, { useState } from 'react';
 
 interface Props {
   value: string;
-  onSave: (newValue: string) => void;
+  onSave: (v: string) => void;
   multiline?: boolean;
   className?: string;
+  style?: React.CSSProperties; // Added to fix the TS error
 }
 
-export default function EditableText({ value, onSave, multiline, className }: Props) {
+export default function EditableText({ value, onSave, multiline, className, style }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
-  
-  // Update local state if external data changes
-  useEffect(() => { setTempValue(value); }, [value]);
 
-  // Common styles to prevent jumping
-  // We use border-transparent in display mode so the 2px border space is always there.
-  const sharedStyles = `
-    w-full transition-all duration-200 rounded
-    ${className} 
-    border-2 p-1 
-    leading-inherit font-inherit text-inherit
-  `;
+  const handleBlur = () => {
+    setIsEditing(false);
+    onSave(tempValue);
+  };
 
   if (isEditing) {
-    const editStyles = `${sharedStyles} bg-blue-50 border-blue-400 outline-none shadow-inner`;
-    
     return multiline ? (
       <textarea
-        autoFocus
-        rows={3}
-        className={`${editStyles} block resize-none`}
+        className={`w-full bg-blue-50 border border-blue-200 rounded p-1 outline-none focus:ring-1 focus:ring-blue-400 ${className}`}
         value={tempValue}
+        autoFocus
+        style={style}
         onChange={(e) => setTempValue(e.target.value)}
-        onBlur={() => { setIsEditing(false); onSave(tempValue); }}
+        onBlur={handleBlur}
       />
     ) : (
       <input
-        autoFocus
-        className={editStyles}
+        className={`w-full bg-blue-50 border border-blue-200 rounded px-1 outline-none focus:ring-1 focus:ring-blue-400 ${className}`}
         value={tempValue}
+        autoFocus
+        style={style}
         onChange={(e) => setTempValue(e.target.value)}
-        onBlur={() => { setIsEditing(false); onSave(tempValue); }}
-        onKeyDown={(e) => { 
-          if (e.key === 'Enter') { 
-            setIsEditing(false); 
-            onSave(tempValue); 
-          } 
-        }}
+        onBlur={handleBlur}
       />
     );
   }
 
   return (
-    <span 
-      onDoubleClick={() => setIsEditing(true)}
-      className={`
-        ${sharedStyles}
-        inline-block
-        cursor-text
-        border-transparent 
-        hover:bg-blue-50/50 hover:border-blue-200 
-      `}
-      title="Double-cliquez pour éditer"
+    <span
+      onClick={() => setIsEditing(true)}
+      style={style}
+      className={`cursor-text hover:bg-slate-100 rounded transition-colors px-0.5 ${className}`}
     >
-      {value || <span className="opacity-40 italic">Vide...</span>}
+      {value || (multiline ? 'Cliquez pour ajouter du texte...' : 'Saisir...')}
     </span>
   );
 }
