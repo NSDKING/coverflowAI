@@ -1,74 +1,77 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// --- IMPORTANT: DO NOT INITIALIZE SDKS HERE ---
+// Wrong: const client = new SomeSDK({ apiKey: process.env.API_KEY });
+// This runs during 'npm run build' when process.env is empty, causing the crash.
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-
+export async function POST(req: Request) {
   try {
-    // 1. On récupère resumeText, mais aussi language et currentData (optionnel)
-    const { resumeText, language = 'French', currentData } = await req.json();
+    // 1. Get the API Key INSIDE the function
+    const apiKey = process.env.OPENAI_API_KEY; // Or your specific service key
 
-    // On prépare le contexte : est-ce une création ou une mise à jour ?
-    const contextInfo = currentData 
-      ? `Update and improve the following existing CV data: ${JSON.stringify(currentData)}`
-      : `Create a new CV based on this raw text: ${resumeText}`;
+    if (!apiKey) {
+      console.error("Build/Runtime Error: API Key is missing.");
+      return NextResponse.json(
+        { error: "Server configuration error (Missing API Key)" },
+        { status: 500 }
+      );
+    }
 
-    const CV_PROMPT = `
-      You are a professional recruitment expert. Your goal is to provide a high-impact CV.
-      
-      STRICT INSTRUCTIONS:
-      1. Language: You MUST write everything in ${language}.
-      2. Tone: Professional, result-oriented, use action verbs.
-      3. Content Quality: 
-         - Write a "summary" (3-4 lines).
-         - For each experience, generate 3 to 5 impactful "description" points.
-         - Ensure the job title is catchy and matches the experience.
-      4. Format: Return ONLY a valid JSON object matching the CVData interface.
-      5. No Placeholder: Do NOT use "Lorem Ipsum" or generic text.
+    // 2. Initialize your client HERE if using an SDK
+    // const client = new SomeSDK({ apiKey });
 
-      JSON INTERFACE:
-      {
-        "personalInfo": { "fullName": "", "jobTitle": "", "email": "", "phone": "", "location": "" },
-        "summary": "",
-        "experiences": [{ "role": "", "company": "", "duration": "", "location": "", "description": [] }],
-        "skills": [],
-        "education": [{ "degree": "", "school": "", "year": "" }],
-        "additionalInfo": { "languages": [], "certifications": [], "interests": [] }
-      }
-    `;
+    // 3. Parse the request body
+    const body = await req.json();
+    const { pdfText, language = 'French' } = body;
 
+    if (!pdfText) {
+      return NextResponse.json({ error: "No text provided" }, { status: 400 });
+    }
+
+    // 4. Example logic: Calling your Supabase Edge Function or OpenAI
+    // We use a try-catch for the specific fetch call
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: CV_PROMPT },
-          { role: "user", content: contextInfo + (resumeText ? "\nAdditional info: " + resumeText : "") }
+          { 
+            role: "system", 
+            content: `Extract CV data in ${language}. Return JSON only.` 
+          },
+          { role: "user", content: pdfText }
         ],
         response_format: { type: "json_object" }
       }),
     });
 
-    const aiResult = await response.json();
-    const structuredData = JSON.parse(aiResult.choices[0].message.content);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || "AI Extraction failed");
+    }
 
-    return new Response(JSON.stringify(structuredData), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    const data = await response.json();
+    const result = JSON.parse(data.choices[0].message.content);
 
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return NextResponse.json(result);
+
+  } catch (error: any) {
+    console.error("Route Error:", error.message);
+    return NextResponse.json(
+      { error: "Failed to process PDF: " + error.message },
+      { status: 500 }
+    );
   }
-});
+}
+
+/**
+ * 5. FORCE DYNAMIC
+ * This tells Next.js NOT to try and pre-render this route as a static page 
+ * during 'npm run build'. This is the ultimate "shield" against build errors.
+ */
+export const dynamic = 'force-dynamic';
