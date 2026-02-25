@@ -28,7 +28,7 @@ export default function CVUploader({ onComplete }: { onComplete: (data: any) => 
     if (fullText.length < 100) {
       alert("Ce PDF semble être une image scannée. Veuillez utiliser un PDF contenant du texte sélectionnable.");
       setLoading(false);
-      return;
+      return "";
     }
     return fullText;
   };

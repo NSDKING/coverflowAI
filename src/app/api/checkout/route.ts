@@ -1,28 +1,16 @@
-import Stripe from "stripe";
+// src/app/api/checkout/route.ts (or similar)
+import { headers } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2026-01-28.clover",
-});
+export async function POST(req: Request) {
+  const headersList = await headers();
+  // Get the host (e.g., localhost:3000 or mydomain.com)
+  const host = headersList.get('host');
+  // Determine protocol (http for local, https for production)
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+  
+  const baseURL = `${protocol}://${host}`;
 
-const session = await stripe.checkout.sessions.create({
-  payment_method_types: ["card"],
-  line_items: [
-    {
-      price_data: {
-        currency: "eur",
-        product_data: { name: "50 Credits Pack" },
-        unit_amount: 1000, // 10€
-      },
-      quantity: 1,
-    },
-  ],
-  mode: "payment",
-  success_url: `${origin}/success`,
-  cancel_url: `${origin}/cancel`,
-  metadata: {
-    userId: "USER_ID_HERE",  
-    credits: 50,
-  },
-});
-
-export {};
+  // Now use baseURL for your Stripe/Checkout session
+  const successUrl = `${baseURL}/success`;
+  // ... rest of your code
+}
